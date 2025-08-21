@@ -6,24 +6,60 @@ The `run` command compiles and runs the code:
     ant run
 ```
 
-If youv've made changes you can run the following command to compile the changes:
+If you've made changes, you can run the following command to compile the changes:
 
 ```
     ant rebuild-run
 ```
+## Data Source Setup
+
+**File Data Source:**
+
+- Place a JSONL `.txt` file in the `/resources` directory
+- Update `file.path` in `runtime.properties` to point to your file
+
+**MongoDB Data Source:**
+
+- Must be connected to the ASU VPN via SSL VPN
+- Update MongoDB connection details in `runtime.properties`
+
+**Kafka Data Source:**
+
+- Ensure Kafka broker is accessible
+- Update Kafka configuration in `runtime.properties`
 
 # Technical Overview
 
 This program can ingest data from three different sources- A text file, MongoDB, and Kafka. To change the data source simple modify the `data.source.type` to either in the *application.properties* file to one of the three accepted types-`file`, `mongo`, or `kafka`.
 
-There is a FieldExtractor class that will be used to convert the file data into the STTC layered format.
+## Architecture
 
-Once extracted from the source, the data will of a 3d matrix of type String and shape [time][layer][state].
+The system uses a **DAO pattern** with pluggable data sources and a *Strategy pattern* for parsing different data formats:
 
-To calculate entropy, we simple invoke the `computeWindowedEntropy(String[][][] data, int windowSize, AggregationStrategy strategy)` function. It takes the extracted data, window size, and type of concatenation (explained below). The Entropy calculation works by taking all the states at a given time instance _t_, concatenating the state values according to the strategy from the params, and adding it to a frequency counter. This counter is used to caclulate probability of state occuring and subsequently the Shannon Entropy.
+*File/Kafka sources*: Use `FileFormatParser` for individual JSON objects
+*MongoDB source*: Uses `MongoBatchParser` for batched message format
 
+## Data Flow
 
-We require different strategies to concatenate the state variables based on the type of entropy being calculated. There are 3 different concatenation(aggregation) strategies:
-- Layer wise, (Casualty, Visual, Movement, Communication): Takes the index _i_ of the layer and concatenates all the values of that singular layer
-- Combined layers, (System, Team): Takes a list of layer indices and concatenates all the values across those layers to form the state representation
-- Individual Entity, (Trainee T1, T2, T3): Takes a list of indices of layers as well as the index _j_ of the specific entity who's state we're representing.  
+The processing pipeline follows these stages:
+
+1. **Data Source** → Raw data from file, MongoDB, or Kafka
+2. **Parser** → Converts raw data into STTC layered format ([time][layer][state])
+3. **Entropy Calculator** → Computes windowed Shannon entropy using aggregation strategies
+4. **Output File** → Results exported to CSV format
+
+## Entropy Calculation
+To calculate entropy, invoke the `computeWindowedEntropy(String[][][] data, int windowSize, AggregationStrategy strategy)` function. It takes the extracted data, window size, and concatenation strategy. The entropy calculation works by:
+
+1. Taking all states at time instance _t_
+2. Concatenating state values according to the strategy
+3. Adding to a frequency counter
+4. Using the counter to calculate probability and Shannon Entropy
+
+## Aggregation Strategy
+
+We support different concatenation strategies based on the entropy type:
+
+1. **Layer-wise** (Casualty, Visual, Movement, Communication): Concatenates all values within a single layer
+2. **Combined layers** (System, Team): Concatenates values across multiple specified layers
+3. **Individual Entity** (Trainee T1, T2, T3): Concatenates values for a specific entity across specified layers
