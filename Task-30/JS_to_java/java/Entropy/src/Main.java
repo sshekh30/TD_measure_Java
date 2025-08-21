@@ -2,7 +2,6 @@ package src;
 
 import dao.*;
 import config.*;
-import extraction.*;
 import parser.*;
 
 
@@ -61,7 +60,6 @@ public static void dumpToFile(List<String> data, String fileName) throws IOExcep
         List<String> rawData = dataSource.readData();
         List<List<List<String>>> layers = parser.parseToSTTCLayers(rawData);
 
-        System.out.println("====Extracted Layers:====");
         System.out.println(layers);
 
         // dumpToFile(rawData, "mongodb_raw_data.json");
