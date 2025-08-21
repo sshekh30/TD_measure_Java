@@ -3,6 +3,8 @@ package src;
 import dao.*;
 import config.*;
 import extraction.*;
+import parser.*;
+
 
 import java.util.*;
 import java.io.*;
@@ -36,23 +38,32 @@ public class Main {
         }
     }
 
+public static void dumpToFile(List<String> data, String fileName) throws IOException {
+   try (FileWriter writer = new FileWriter(fileName)) {
+       writer.write("[\n");
+       for (int i = 0; i < data.size(); i++) {
+           writer.write("  " + data.get(i));
+           if (i < data.size() - 1) {
+               writer.write(",");
+           }
+           writer.write("\n");
+       }
+       writer.write("]\n");
+       System.out.println("Data dumped to: " + fileName);
+   }
+}
+
     public static void main(String[] args) throws IOException {
         ConfigManager config = new ConfigManager("resources/runtime.properties");
         DataSourceDAO dataSource = DataSourceFactory.createDataSource(config);
-
-        // FieldExtractor extractor = new FieldExtractor(dataSource);
-        // List<List<List<String>>> layers = extractor.extractSTTCLayers();  
-
-        // System.out.println("====Extracted Layers:====");
-        // System.out.println(layers);
+        DataParser parser = ParserFactory.createParser(config.getDataSourceType());
 
         List<String> rawData = dataSource.readData();
-        System.out.println("====Raw Data from DataSource:====");
-        System.out.println("Number of records: " + rawData.size());
-        
-        // Print first few records
-        for (int i = 0; i < Math.min(5, rawData.size()); i++) {
-            System.out.println("Record " + i + ": " + rawData.get(i));
-        }
+        List<List<List<String>>> layers = parser.parseToSTTCLayers(rawData);
+
+        System.out.println("====Extracted Layers:====");
+        System.out.println(layers);
+
+        // dumpToFile(rawData, "mongodb_raw_data.json");
     }
 }
