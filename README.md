@@ -1,1 +1,1 @@
-# TD_measure_Java
+# This branch contains Data dump of the integration test done at MIX Center
