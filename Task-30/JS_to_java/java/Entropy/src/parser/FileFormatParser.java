@@ -5,13 +5,39 @@ import java.util.*;
 
 public class FileFormatParser implements DataParser {
 
-    private static String extractArrayPresence(String jsonSection, String arrayName) {
-        return jsonSection.contains("\"" + arrayName + "\":[]") ? "0" : "1";
+    private enum VisualCat {
+        ROI, OOI, CASUALTY, TRAINEE, NONE
     }
+
+    private static final VisualCat[] VISUAL_ORDER = {
+        VisualCat.ROI, VisualCat.OOI, VisualCat.CASUALTY, VisualCat.TRAINEE
+    };
+
+    private static String bits(VisualCat cat) {
+        if (cat == VisualCat.NONE) {
+            return "0000";
+        }
+        StringBuilder sb = new StringBuilder(4);
+        for (VisualCat c : VISUAL_ORDER) {
+            sb.append(c == cat ? '1' : '0');
+        }
+        return sb.toString();
+    }
+
+    private static final String KEY_ROI = "\"ROI_Watched\"";
+    private static final String KEY_OOI = "\"OOI_Watched\"";
+    private static final String KEY_CAS = "\"Casualty_Watched\"";
+    private static final String KEY_TRA = "\"Trainee_Watched\"";
+
+    // private static String extractArrayPresence(String jsonSection, String arrayName) {
+    //     return jsonSection.contains("\"" + arrayName + "\":[]") ? "0" : "1";
+    // }
 
     private static String[] extractTraineeObject(String jsonObject, String fieldName) {
         int traineeStart = jsonObject.indexOf("\"trainees\":");
-        if (traineeStart == -1) return new String[]{""};
+        if (traineeStart == -1) {
+            return new String[]{""};
+        }
         String traineesSection = jsonObject.substring(traineeStart);
         String[] traineeObjects = traineesSection.split("\"" + fieldName + "\":");
         return traineeObjects;
@@ -31,27 +57,29 @@ public class FileFormatParser implements DataParser {
     public static List<String> extractVisual(String jsonObject) {
         List<String> visual = new ArrayList<>();
         String[] traineeObjects = extractTraineeObject(jsonObject, "VisualActivity");
+
         for (int i = 1; i < traineeObjects.length; i++) {
-            String visualLayer = traineeObjects[i];
-            
-            String isWatchingAOI = extractArrayPresence(visualLayer, "AOI_Watched");
-            String isWatchingOOI = extractArrayPresence(visualLayer, "OOI_Watched");
-            String isWatchingROI = extractArrayPresence(visualLayer, "ROI_Watched");
+            String v = traineeObjects[i];
 
+            VisualCat cat
+                    = v.contains(KEY_ROI) ? VisualCat.ROI
+                    : v.contains(KEY_OOI) ? VisualCat.OOI
+                    : v.contains(KEY_CAS) ? VisualCat.CASUALTY
+                    : v.contains(KEY_TRA) ? VisualCat.TRAINEE
+                    : VisualCat.NONE;
 
-            visual.add(isWatchingROI + isWatchingAOI + isWatchingOOI);
-
+            visual.add(bits(cat));
         }
         return visual;
     }
 
-    @Override 
+    @Override
     public List<List<List<String>>> parseToSTTCLayers(List<String> rawData) throws IOException {
         List<List<List<String>>> sttcLayers = new ArrayList<>();
 
         List<List<String>> visual = new ArrayList<>();
         List<List<String>> comm = new ArrayList<>();
-        for (String line: rawData) {
+        for (String line : rawData) {
             List<List<String>> dataFrame = new ArrayList<>();
             List<String> traineeComm = extractCommunication(line);
             List<String> traineeViz = extractVisual(line);
@@ -64,10 +92,9 @@ public class FileFormatParser implements DataParser {
 
         System.out.println("======Visual Layer: ======");
         System.out.println(visual);
-        
+
         System.out.println("======Communication Layer: ======\n");
         System.out.println(comm);
-        
 
         return sttcLayers;
     }
