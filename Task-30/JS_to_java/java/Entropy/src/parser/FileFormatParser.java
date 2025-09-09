@@ -10,7 +10,7 @@ public class FileFormatParser implements DataParser {
     }
 
     private static final VisualCat[] VISUAL_ORDER = {
-        VisualCat.ROI, VisualCat.OOI, VisualCat.CASUALTY, VisualCat.TRAINEE
+        VisualCat.OOI, VisualCat.ROI, VisualCat.TRAINEE, VisualCat.CASUALTY
     };
 
     private static String bits(VisualCat cat) {
