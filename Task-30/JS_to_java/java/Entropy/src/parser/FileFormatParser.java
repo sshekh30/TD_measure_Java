@@ -2,6 +2,7 @@ package parser;
 
 import java.io.*;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class FileFormatParser implements DataParser {
 
@@ -24,6 +25,9 @@ public class FileFormatParser implements DataParser {
         return sb.toString();
     }
 
+    private static final Pattern TIMER_EVENT
+            = Pattern.compile("\"scenarioEvent\"\\s*:\\s*\"Timer\"");
+
     private static final String KEY_ROI = "\"ROI_Watched\"";
     private static final String KEY_OOI = "\"OOI_Watched\"";
     private static final String KEY_CAS = "\"Casualty_Watched\"";
@@ -32,7 +36,6 @@ public class FileFormatParser implements DataParser {
     // private static String extractArrayPresence(String jsonSection, String arrayName) {
     //     return jsonSection.contains("\"" + arrayName + "\":[]") ? "0" : "1";
     // }
-
     private static String[] extractTraineeObject(String jsonObject, String fieldName) {
         int traineeStart = jsonObject.indexOf("\"trainees\":");
         if (traineeStart == -1) {
@@ -55,6 +58,10 @@ public class FileFormatParser implements DataParser {
     }
 
     public static List<String> extractVisual(String jsonObject) {
+        // skip non-Timer lines entirely
+        if (!TIMER_EVENT.matcher(jsonObject).find()) {
+            return null;
+        }
         List<String> visual = new ArrayList<>();
         String[] traineeObjects = extractTraineeObject(jsonObject, "VisualActivity");
 
@@ -83,6 +90,10 @@ public class FileFormatParser implements DataParser {
             List<List<String>> dataFrame = new ArrayList<>();
             List<String> traineeComm = extractCommunication(line);
             List<String> traineeViz = extractVisual(line);
+            if (traineeViz == null) {
+                // not a Timer event → ignore this line completely
+                continue;
+            }
             comm.add(traineeComm);
             visual.add(traineeViz);
             dataFrame.add(traineeComm);
