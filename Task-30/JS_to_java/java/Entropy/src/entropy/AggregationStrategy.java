@@ -1,3 +1,4 @@
+package entropy;
 import java.util.List;
 
 public interface AggregationStrategy {

@@ -1,3 +1,4 @@
+package entropy;
 import java.util.*;
 
 public class GeneralizedEntropyCalculator {
@@ -23,7 +24,7 @@ public class GeneralizedEntropyCalculator {
             }
             double entropy = calculateEntropy(stateCombinations, windowSize * strategy.getKeysPerTimePoint());
             entropyValues[i] = Math.round(entropy* 10000.0) / 10000.0;  
-
+            
         }
 
         return entropyValues;

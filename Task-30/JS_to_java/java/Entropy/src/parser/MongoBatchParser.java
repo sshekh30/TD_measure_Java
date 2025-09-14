@@ -23,7 +23,7 @@ public List<List<List<String>>> parseToSTTCLayers(List<String> rawData) throws I
        
        String payload = record.get("payload").asText();
        JsonNode payloadJson = mapper.readTree(payload);
-       JsonNode messages = payloadJson.get("Messages"); // You forgot to declare this!
+       JsonNode messages = payloadJson.get("Messages"); 
        
        if (messages != null && messages.isArray()) {
            for (JsonNode message : messages) {
@@ -36,17 +36,14 @@ public List<List<List<String>>> parseToSTTCLayers(List<String> rawData) throws I
                    for (JsonNode trainee : trainees) {
                        List<List<String>> dataFrame = new ArrayList<>();
                        
-                       // Communication layer
                        List<String> commLayer = new ArrayList<>();
                        JsonNode communication = trainee.get("Communication");
                        String commValue = (communication != null && communication.asBoolean()) ? "1" : "0";
                        commLayer.add(commValue);
                        
-                       // Visual layer
                        List<String> vizLayer = new ArrayList<>();
                        JsonNode visualActivity = trainee.get("VisualActivity");
                        if (visualActivity != null) {
-                           // Check OOI, AOI, ROI arrays
                            String ooi = (visualActivity.get("OOI_Watched") != null && 
                                         visualActivity.get("OOI_Watched").size() > 0) ? "1" : "0";
                            String aoi = (visualActivity.get("AOI_Watched") != null && 
@@ -54,18 +51,15 @@ public List<List<List<String>>> parseToSTTCLayers(List<String> rawData) throws I
                            String roi = (visualActivity.get("ROI_Watched") != null && 
                                         visualActivity.get("ROI_Watched").size() > 0) ? "1" : "0";
                            
-                           // Concatenate: ROI + AOI + OOI
                            String vizValue = roi + aoi + ooi;
                            vizLayer.add(vizValue);
                        } else {
-                           vizLayer.add("000"); // Default if no visual activity
+                           vizLayer.add("000"); 
                        }
                        
-                       // Add layers to data frame
                        dataFrame.add(commLayer);
                        dataFrame.add(vizLayer);
                        
-                       // Add data frame to sttcLayers
                        sttcLayers.add(dataFrame);
                    }
                }
