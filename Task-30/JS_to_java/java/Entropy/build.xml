@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="STTC-Entropy" default="compile" basedir=".">
-    
+
     <!-- Properties -->
     <property name="src.dir" value="src"/>
     <property name="resources.dir" value="resources"/>
@@ -13,12 +13,12 @@
         <mkdir dir="${classes.dir}"/>
         <mkdir dir="${lib.dir}"/>
     </target>
-    
+
     <!-- Clean -->
     <target name="clean">
         <delete dir="${build.dir}"/>
     </target>
-    
+
     <!-- Compile -->
     <target name="compile" depends="init">
         <javac srcdir="${src.dir}" destdir="${classes.dir}" includeantruntime="false">
@@ -28,15 +28,15 @@
                 </fileset>
             </classpath>
         </javac>
-        
+
         <copy todir="${classes.dir}">
             <fileset dir="${resources.dir}"/>
         </copy>
     </target>
-    
+
     <!-- Run -->
     <target name="run" depends="compile">
-        <java classname="src.Main" fork="true">
+        <java classname="Main" fork="true">
             <classpath>
                 <pathelement path="${classes.dir}"/>
                 <fileset dir="${lib.dir}">
@@ -45,10 +45,10 @@
             </classpath>
         </java>
     </target>
-    
+
     <!-- Run with specific data source -->
     <target name="run-file" depends="compile">
-        <java classname="src.Main" fork="true">
+        <java classname="Main" fork="true">
             <classpath>
                 <pathelement path="${classes.dir}"/>
                 <fileset dir="${lib.dir}">
@@ -63,5 +63,5 @@
     <target name="rebuild-run" depends="clean, run">
         <echo message="Forced rebuild and run completed"/>
     </target>
-    
+
 </project>
