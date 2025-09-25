@@ -76,7 +76,7 @@ public class EntropyVisualizer {
         );
         html.append(".header h1 { margin: 0; font-size: 24px; }");
         html.append(
-            ".charts-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }"
+            ".charts-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }"
         );
         html.append(
             ".chart { background: white; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }"
@@ -100,14 +100,15 @@ public class EntropyVisualizer {
         html.append("<body>");
         html.append("<div class=\"header\">");
         html.append("<h1>Team Dynamics Entropy Plots</h1>");
+        html.append("<p>Trainees = 3, Casualties = 3, Window Size = 4</p>");
         html.append("</div>");
         html.append("<div class=\"charts-container\" id=\"charts\"></div>");
         html.append("<script>");
         html.append("const data = ").append(jsonData).append(";");
         html.append(
-            "const margin = {top: 20, right: 30, bottom: 40, left: 60};"
+            "const margin = {top: 20, right: 30, bottom: 40, left: 80};"
         );
-        html.append("const width = 320 - margin.left - margin.right;");
+        html.append("const width = 560 - margin.left - margin.right;");
         html.append("const height = 240 - margin.top - margin.bottom;");
         html.append(
             "data.forEach((layer, index) => { createChart(layer, index); });"
@@ -149,9 +150,16 @@ public class EntropyVisualizer {
         html.append(
             "svg.append('g').attr('class', 'axis').attr('transform', 'translate(0,' + height + ')')"
         );
+
         html.append(".call(d3.axisBottom(xScale));");
         html.append(
             "svg.append('g').attr('class', 'axis').call(d3.axisLeft(yScale));"
+        );
+        html.append(
+            "svg.append('g').attr('class', 'axis').call(d3.axisTop(xScale).tickFormat(''));"
+        );
+        html.append(
+            "svg.append('g').attr('class', 'axis').attr('transform', 'translate(' + width + ',0)').call(d3.axisRight(yScale).tickFormat(''));"
         );
         html.append("svg.append('text')");
         html.append(
