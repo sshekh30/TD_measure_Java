@@ -7,9 +7,11 @@ import java.util.*;
 
 public class FileFormatParser implements DataParser {
 
-    private static Map<String, Boolean> triageStatus = new HashMap<>();
-    private static Map<String, Boolean> treatmentStatus = new HashMap<>();
+    private static Map<String, String> triageStatus = new HashMap<>();
+    private static Map<Integer, Boolean> treatmentStatus = new HashMap<>();
     private static double[] movementROI = null;
+    private static Map<String, Integer> casualtiesId = new HashMap<>();
+    private static Map<Integer, String> casualtyIdReversed = new HashMap<>();
 
     private ObjectMapper mapper = new ObjectMapper();
 
@@ -17,11 +19,9 @@ public class FileFormatParser implements DataParser {
         for (String line : rawData) {
             try {
                 JsonNode node = mapper.readTree(line);
-                if (
-                    "ScenarioDefinition".equals(
+                if ("ScenarioDefinition".equals(
                         node.get("scenarioEvent").asText()
-                    )
-                ) {
+                )) {
                     initializeCasualties(node);
                     initializeMovementROI(node);
                     break;
@@ -34,11 +34,24 @@ public class FileFormatParser implements DataParser {
 
     public static void initializeCasualties(JsonNode jsonObject) {
         JsonNode casualties = jsonObject.get("Scenario").get("Casualties");
-
+        int count = 1;
         for (JsonNode casualty : casualties) {
             String casualtyId = casualty.get("id").asText();
-            triageStatus.put(casualtyId, false);
-            treatmentStatus.put(casualtyId, false);
+            switch (count) {
+                case 1:
+                    triageStatus.put(casualtyId, "01");        
+                    break;
+                case 2:
+                    triageStatus.put(casualtyId, "06");        
+                    break;
+                case 3:
+                    triageStatus.put(casualtyId, "11");        
+                    break;    
+            }
+            treatmentStatus.put(count, false);
+            casualtiesId.put(casualtyId, count);
+            casualtyIdReversed.put(count, casualtyId);
+            count++;
         }
     }
 
@@ -53,25 +66,23 @@ public class FileFormatParser implements DataParser {
             JsonNode regions = scenario.get("RegionsOfInterest");
             if (regions == null) {
                 System.err.println(
-                    "No 'RegionsOfInterest' field found in Scenario"
+                        "No 'RegionsOfInterest' field found in Scenario"
                 );
                 return;
             }
 
             for (JsonNode region : regions) {
                 JsonNode idNode = region.get("id");
-                if (
-                    idNode != null &&
-                    "MovementLayerImportant".equals(idNode.asText())
-                ) {
+                if (idNode != null
+                        && "MovementLayerImportant".equals(idNode.asText())) {
                     double[] location = mapper.treeToValue(
-                        region.get("location"),
-                        double[].class
+                            region.get("location"),
+                            double[].class
                     );
 
                     if (location.length < 6) {
                         System.err.println(
-                            "Location array too short, expected at least 6 elements"
+                                "Location array too short, expected at least 6 elements"
                         );
                         return;
                     }
@@ -81,13 +92,13 @@ public class FileFormatParser implements DataParser {
                     double midX = location[3];
                     double midZ = location[5];
 
-                    movementROI = new double[] { centerX, centerZ, midX, midZ };
+                    movementROI = new double[]{centerX, centerZ, midX, midZ};
                     break;
                 }
             }
         } catch (Exception e) {
             System.err.println(
-                "Error processing JSON for movement ROI: " + e.getMessage()
+                    "Error processing JSON for movement ROI: " + e.getMessage()
             );
         }
     }
@@ -102,13 +113,19 @@ public class FileFormatParser implements DataParser {
             for (int i = 0; i < trainees.size(); i++) {
                 JsonNode trainee = trainees.get(i);
                 JsonNode commNode = trainee.get("Communication");
-                if (i == 0) comms.add(commNode.asBoolean() ? "46" : "47");
-                if (i == 1) comms.add(commNode.asBoolean() ? "48" : "49");
-                if (i == 2) comms.add(commNode.asBoolean() ? "50" : "51");
+                if (i == 0) {
+                    comms.add(commNode.asBoolean() ? "46" : "47");
+                }
+                if (i == 1) {
+                    comms.add(commNode.asBoolean() ? "48" : "49");
+                }
+                if (i == 2) {
+                    comms.add(commNode.asBoolean() ? "50" : "51");
+                }
             }
         } catch (Exception e) {
             System.err.println(
-                "Error extracting communication: " + e.getMessage()
+                    "Error extracting communication: " + e.getMessage()
             );
         }
         return comms;
@@ -122,44 +139,90 @@ public class FileFormatParser implements DataParser {
             for (int i = 0; i < trainees.size(); i++) {
                 StringBuilder state = new StringBuilder();
                 JsonNode trainee = trainees.get(i);
+                JsonNode visualArray = trainee.get("VisualActivity");
 
-                if (
-                    trainee.get("VisualActivity") != null &&
-                    trainee.get("VisualActivity").has("Trainee_Watched")
-                ) {
-                    if (i == 0) state.append("22");
-                    if (i == 1) state.append("24");
-                    if (i == 2) state.append("26");
-                } else {
-                    if (i == 0) state.append("23");
-                    if (i == 1) state.append("25");
-                    if (i == 2) state.append("27");
+                boolean hasTraineeWatched = false;
+                boolean hasOOIWatched = false;
+                boolean hasROIWatched = false;
+
+                if (visualArray != null && visualArray.isArray()) {
+                    for (JsonNode va  : visualArray) {
+                        if (va.has("Trainee_Watched")) {
+                            hasTraineeWatched = true;
+                        }
+                        if (va.has("OOI_Watched")) {
+                            hasOOIWatched = true;
+                        }
+                        if (va.has("ROI_Watched")) {
+                            hasROIWatched = true;
+                        }
+                    }
                 }
 
-                if (
-                    trainee.get("VisualActivity") != null &&
-                    trainee.get("VisualActivity").has("OOI_Watched")
-                ) {
-                    if (i == 0) state.append("28");
-                    if (i == 1) state.append("30");
-                    if (i == 2) state.append("32");
+                if (hasTraineeWatched) {
+                    if (i == 0) {
+                        state.append("22");
+                    }
+                    if (i == 1) {
+                        state.append("24");
+                    }
+                    if (i == 2) {
+                        state.append("26");
+                    }
                 } else {
-                    if (i == 0) state.append("29");
-                    if (i == 1) state.append("31");
-                    if (i == 2) state.append("33");
+                    if (i == 0) {
+                        state.append("23");
+                    }
+                    if (i == 1) {
+                        state.append("25");
+                    }
+                    if (i == 2) {
+                        state.append("27");
+                    }
                 }
 
-                if (
-                    trainee.get("VisualActivity") != null &&
-                    trainee.get("VisualActivity").has("ROI_Watched")
-                ) {
-                    if (i == 0) state.append("34");
-                    if (i == 1) state.append("36");
-                    if (i == 2) state.append("38");
+                if (hasROIWatched) {
+                    if (i == 0) {
+                        state.append("28");
+                    }
+                    if (i == 1) {
+                        state.append("30");
+                    }
+                    if (i == 2) {
+                        state.append("32");
+                    }
                 } else {
-                    if (i == 0) state.append("35");
-                    if (i == 1) state.append("37");
-                    if (i == 2) state.append("39");
+                    if (i == 0) {
+                        state.append("29");
+                    }
+                    if (i == 1) {
+                        state.append("31");
+                    }
+                    if (i == 2) {
+                        state.append("33");
+                    }
+                }
+
+                if (hasOOIWatched) {
+                    if (i == 0) {
+                        state.append("34");
+                    }
+                    if (i == 1) {
+                        state.append("36");
+                    }
+                    if (i == 2) {
+                        state.append("38");
+                    }
+                } else {
+                    if (i == 0) {
+                        state.append("35");
+                    }
+                    if (i == 1) {
+                        state.append("37");
+                    }
+                    if (i == 2) {
+                        state.append("39");
+                    }
                 }
 
                 visual.add(state.toString());
@@ -178,8 +241,8 @@ public class FileFormatParser implements DataParser {
             for (int i = 0; i < trainees.size(); i++) {
                 JsonNode traineeMovement = trainees.get(i).get("Movement");
                 double[] headCoords = mapper.treeToValue(
-                    traineeMovement.get("Head"),
-                    double[].class
+                        traineeMovement.get("Head"),
+                        double[].class
                 );
 
                 double headX = headCoords[0];
@@ -190,13 +253,19 @@ public class FileFormatParser implements DataParser {
                 double minZ = movementROI[1] - movementROI[3] / 2;
                 double maxZ = movementROI[1] + movementROI[3] / 2;
 
-                boolean isInROI = (headX >= minX &&
-                    headX <= maxX &&
-                    headZ >= minZ &&
-                    headZ <= maxZ);
-                if (i == 0) movementStates.add(isInROI ? "40" : "41");
-                if (i == 1) movementStates.add(isInROI ? "42" : "43");
-                if (i == 2) movementStates.add(isInROI ? "44" : "45");
+                boolean isInROI = (headX >= minX
+                        && headX <= maxX
+                        && headZ >= minZ
+                        && headZ <= maxZ);
+                if (i == 0) {
+                    movementStates.add(isInROI ? "40" : "41");
+                }
+                if (i == 1) {
+                    movementStates.add(isInROI ? "42" : "43");
+                }
+                if (i == 2) {
+                    movementStates.add(isInROI ? "44" : "45");
+                }
             }
         } catch (Exception e) {
             System.err.println("Error extracting movement: " + e.getMessage());
@@ -205,39 +274,149 @@ public class FileFormatParser implements DataParser {
         return movementStates;
     }
 
-    public static void updateCasualtyStatus(JsonNode jsonObject) {
-        if (
-            "triage".equals(jsonObject.get("subtype").asText()) &&
-            "stop".equals(jsonObject.get("event").asText())
-        ) {
+    public static void updateTreatmentStatus(JsonNode jsonObject) {
+        if ("treatment".equals(jsonObject.get("subtype").asText())
+                && "stop".equals(jsonObject.get("event").asText())) {
             String subtypeId = jsonObject.get("subtype_id").asText();
-            triageStatus.put(subtypeId, true);
-        }
-
-        if (
-            "treatment".equals(jsonObject.get("subtype").asText()) &&
-            "stop".equals(jsonObject.get("event").asText())
-        ) {
-            String subtypeId = jsonObject.get("subtype_id").asText();
-            treatmentStatus.put(subtypeId, true);
+            int casualtyId = casualtiesId.get(subtypeId);
+            treatmentStatus.put(casualtyId, true);
         }
     }
 
-    private List<String> getCurrentCasualtyState() {
-        List<String> casualtyStates = new ArrayList<>();
-        StringBuilder allCasualties = new StringBuilder();
-        for (String casualtyId : triageStatus.keySet()) {
-            String triageState = triageStatus.get(casualtyId) ? "1" : "0";
-            String treatmentState = treatmentStatus.get(casualtyId) ? "1" : "0";
-            allCasualties.append(triageState).append(treatmentState);
+    public static void updateCasualtyStatus(JsonNode jsonObject) {
+        String triageState = "";
+        String casualty = jsonObject.get("casualty_id").asText();
+        String stateChange = jsonObject.get("stateChange").asText();
+
+        int casualtyId = casualtiesId.get(casualty);
+
+        switch (casualtyId) {
+            case 1:
+                switch (stateChange) {
+                    case "not_triaged":
+                        triageState = "01";
+                        break;
+                    case "urgent":
+                        triageState = "02";
+                        break;
+                    case "delayed":
+                        triageState = "03";
+                        break;
+                    case "minimal":
+                        triageState = "04";
+                        break;
+                    case "expectant":
+                        triageState = "05";
+                        break;
+                    default:
+                        triageState = "01";
+                        break;
+                }
+                break;
+            case 2:
+                switch (stateChange) {
+                    case "not_triaged":
+                        triageState = "06";
+                        break;
+                    case "urgent":
+                        triageState = "07";
+                        break;
+                    case "delayed":
+                        triageState = "08";
+                        break;
+                    case "minimal":
+                        triageState = "09";
+                        break;
+                    case "expectant":
+                        triageState = "10";
+                        break;
+                    default:
+                        triageState = "06";
+                        break;
+                }
+                break;
+            case 3:
+                switch (stateChange) {
+                    case "not_triaged":
+                        triageState = "11";
+                        break;
+                    case "urgent":
+                        triageState = "12";
+                        break;
+                    case "delayed":
+                        triageState = "13";
+                        break;
+                    case "minimal":
+                        triageState = "14";
+                        break;
+                    case "expectant":
+                        triageState = "15";
+                        break;
+                    default:
+                        triageState = "11";
+                        break;
+                }
+                break;
         }
-        casualtyStates.add(allCasualties.toString());
+        triageStatus.put(casualty, triageState);
+    }
+
+    private List<String> getCasualtyState() {
+        List<String> casualtyStates = new ArrayList<>();
+        String finalCasualty = "";
+        int numCasualties = casualtiesId.size(); 
+        String treatmentState = "";
+        boolean treatmentValue = false;
+        String triageState = "";
+        String casualtyStringId = "";
+
+        for (int casualtyId = 1; casualtyId <= numCasualties; casualtyId++) {
+
+            casualtyStringId = casualtyIdReversed.get(casualtyId);
+            treatmentValue = treatmentStatus.getOrDefault(casualtyId, false);
+
+            if (treatmentValue) {
+                switch (casualtyId) {
+                    case 1:
+                        treatmentState = "16";
+                        break;
+                    case 2:
+                        treatmentState = "18";
+                        break;
+                    case 3:
+                        treatmentState = "20";
+                        break;
+                    default:
+                        treatmentState = "17";
+                        break;
+                }
+            } else {
+                switch (casualtyId) {
+                    case 1:
+                        treatmentState = "17";
+                        break;
+                    case 2:
+                        treatmentState = "19";
+                        break;
+                    case 3:
+                        treatmentState = "21";
+                        break;
+                    default:
+                        treatmentState = "17";
+                        break;
+                }
+            }
+
+            triageState = triageStatus.get(casualtyStringId);
+            finalCasualty = triageState + treatmentState;
+            casualtyStates.add(finalCasualty);
+        }
         return casualtyStates;
     }
 
     @Override
     public List<List<List<String>>> parseToSTTCLayers(List<String> rawData)
-        throws IOException {
+            throws IOException {
         boolean logging = true;
 
         List<List<List<String>>> sttcLayers = new ArrayList<>();
@@ -250,27 +429,30 @@ public class FileFormatParser implements DataParser {
         for (String line : rawData) {
             JsonNode node = mapper.readTree(line);
             String eventType = node.get("scenarioEvent").asText();
+            List<List<String>> dataFrame = new ArrayList<>();
 
             if ("Timer".equals(eventType)) {
-                List<List<String>> dataFrame = new ArrayList<>();
                 List<String> traineeComm = extractCommunication(node);
                 List<String> traineeViz = extractVisual(node);
-                List<String> traineeCas = getCurrentCasualtyState();
                 List<String> traineeMov = extractMovement(node);
+                List<String> traineeCas = getCasualtyState();
 
                 comm.add(traineeComm);
                 visual.add(traineeViz);
-                casualty.add(traineeCas);
                 movement.add(traineeMov);
+                casualty.add(traineeCas);
 
                 dataFrame.add(traineeComm);
                 dataFrame.add(traineeViz);
                 dataFrame.add(traineeCas);
                 dataFrame.add(traineeMov);
-
                 sttcLayers.add(dataFrame);
+            } else if ("Triage".equals(eventType)) {
+                if ("state".equals(node.get("subtype_id").asText())) {
+                    updateCasualtyStatus(node);
+                }
             } else if ("Domain".equals(eventType)) {
-                updateCasualtyStatus(node);
+                updateTreatmentStatus(node);
             }
         }
         if (logging) {
@@ -290,26 +472,26 @@ public class FileFormatParser implements DataParser {
 
                 if (timeInstance.size() >= 4) {
                     System.out.println(
-                        "  Communication: " + timeInstance.get(0)
+                            "  Communication: " + timeInstance.get(0)
                     );
                     System.out.println(
-                        "  Visual:        " + timeInstance.get(1)
+                            "  Visual:        " + timeInstance.get(1)
                     );
                     System.out.println(
-                        "  Casualty:      " + timeInstance.get(2)
+                            "  Casualty:      " + timeInstance.get(2)
                     );
                     System.out.println(
-                        "  Movement:      " + timeInstance.get(3)
+                            "  Movement:      " + timeInstance.get(3)
                     );
                 } else {
                     System.out.println(
-                        "  Incomplete data - only " +
-                            timeInstance.size() +
-                            " layers"
+                            "  Incomplete data - only "
+                            + timeInstance.size()
+                            + " layers"
                     );
                     for (int layer = 0; layer < timeInstance.size(); layer++) {
                         System.out.println(
-                            "  Layer " + layer + ": " + timeInstance.get(layer)
+                                "  Layer " + layer + ": " + timeInstance.get(layer)
                         );
                     }
                 }
