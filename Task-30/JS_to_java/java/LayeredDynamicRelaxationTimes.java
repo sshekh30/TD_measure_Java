@@ -1,16 +1,16 @@
 import java.util.*;
 
 public class LayeredDynamicRelaxationTimes {
-    public static int[] LayeredDynamicsRelaxationTimes(int time1, int time2, int[] series) {
+    public static int[] LayeredDynamicsRelaxationTimes(int time1, int time2, double[] series) {
         // 1. Extract failure duration sub-array
-        int[] failureDuration = Arrays.copyOfRange(series, time1, time2 + 1);
+        double[] failureDuration = Arrays.copyOfRange(series, time1, time2 + 1);
 
         // 2. Calculate 99th percentile
-        int percentileValue = percentile99(failureDuration);
+        double percentileValue = percentile99(failureDuration);
 
         // 3. Collect indices above or equal to percentile
         List<Integer> aboveThreshTimes = new ArrayList<>();
-        List<Integer> crossings = new ArrayList<>();
+        List<Double> crossings = new ArrayList<>();
         for (int i = 0; i < failureDuration.length; i++) {
             if (failureDuration[i] >= percentileValue) {
                 aboveThreshTimes.add(i);
@@ -19,7 +19,13 @@ public class LayeredDynamicRelaxationTimes {
         }
 
         // 4. rt_init: first index above threshold
+
+        if (aboveThreshTimes.isEmpty()) {
+            return null; // or some other indication of no valid times
+        }
+        
         int rt_init = aboveThreshTimes.get(0);
+        
 
         // 5. rt_peak (Note: contains logical error as per JS version)
         List<Integer> rt_peak = new ArrayList<>();
@@ -30,6 +36,10 @@ public class LayeredDynamicRelaxationTimes {
             }
         }
 
+        if (rt_peak.isEmpty()) {
+            return null; // Fallback if no peaks found
+        }
+
         // 6. rt_last: last index above threshold
         int rt_last = aboveThreshTimes.get(aboveThreshTimes.size() - 1);
 
@@ -37,16 +47,16 @@ public class LayeredDynamicRelaxationTimes {
     }
 
     // Helper to compute the 99th percentile (rounded down)
-    public static int percentile99(int[] arr) {
-        int[] sorted = arr.clone();
+    public static double percentile99(double[] arr) {
+        double[] sorted = arr.clone();
         Arrays.sort(sorted);
         int index = (int) Math.ceil(0.99 * sorted.length) - 1;
         return sorted[Math.max(index, 0)];
     }
 
-    public static void main(String[] args) {
-        int[] series = {1,2,3,3,2,1,2,1,1};
-        int[] result = LayeredDynamicsRelaxationTimes(0, 5, series);
-        System.out.println("[" + result[0] + ", " + result[1] + ", " + result[2] + "]");
-    }
+    // public static void main(String[] args) {
+    //     double[] series = {0.0,0.0,0.0,0.0,0.0,0.0,0.8113,1.5,1.5,0.8113,0.8113,1.5,2.0,1.5,1.5,1.5,0.8113,0.0,0.0,0.0,0.8113,1.5,1.5,0.8113,0.8113,1.5,2.0,1.5,1.5,1.5,0.8113,0.0,0.0,0.0,0.8113,1.5,1.5,0.8113,0.8113,1.5,2.0,1.5};
+    //     int[] result = LayeredDynamicsRelaxationTimes(0, 41, series);
+    //     System.out.println("[" + result[0] + ", " + result[1] + ", " + result[2] + "]");
+    // }
 }

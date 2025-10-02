@@ -34,6 +34,20 @@ public class probxy {
 
     public static double[][] probxy(double[][] xy, Object... args) 
     {
+        // Argument validation
+        try {
+            if (args.length < 0 || args.length > 2) {
+                throw new IllegalArgumentException();
+            }
+        } catch (IllegalArgumentException e) {
+            if (args.length < 0) {
+                System.err.println("Insufficient no of arguments");
+            } else {
+                System.err.println("Too many no of arguments");
+            }
+            return new double[0][0];
+        }
+
         int m = xy.length;
         int n = xy[0].length;
         if (n > m) 
@@ -43,22 +57,36 @@ public class probxy {
             n = xy[0].length;
         }
 
-        if (n != 2) 
-        {
+        double[] X;
+        double[] Y;
+        try {
+            if (n != 2) {
+                throw new IllegalArgumentException();
+            } else {
+                X = new double[m];
+                Y = new double[m];
+                for (int i = 0; i < m; i++) {
+                    X[i] = xy[i][0];
+                    Y[i] = xy[i][1];
+                }
+            }
+        } catch (IllegalArgumentException e) {
             System.err.println("Invalid data size: XY should be two column vector");
             return new double[0][0];
         }
 
-        double[] X = new double[m];
-        double[] Y = new double[m];
-        for (int i = 0; i < m; i++) 
-        {
-            X[i] = xy[i][0];
-            Y[i] = xy[i][1];
+        Object nBinsX;
+        Object nBinsY;
+        if (args.length == 0) {
+            nBinsX = 10;
+            nBinsY = 10;
+        } else if (args.length == 1) {
+            nBinsX = args[0];
+            nBinsY = 10;
+        } else {
+            nBinsX = args[0];
+            nBinsY = args[1];
         }
-
-        Object nBinsX = args.length > 0 ? args[0] : 10;
-        Object nBinsY = args.length > 1 ? args[1] : 10;
 
         double[] edgeX;
         if (nBinsX instanceof Integer) 
@@ -74,18 +102,20 @@ public class probxy {
                 edgeX = computeEdge(X, (int) binX[0][0]);
                 nBinsX = (int) binX[0][0];
             } 
-            else 
-            {
+            else if (binX.length == 1 || binX[0].length == 1) {
                 List<Double> flat = new ArrayList<>();
-                for (int i = 0; i < binX[0].length; i++) 
-                {
-                    for (int j = 0; j < binX.length; j++) 
-                    {
+                int count = 0;
+                for (int i = 0; i < binX[0].length; i++) {
+                    for (int j = 0; j < binX.length; j++) {
                         flat.add(binX[j][i]);
+                        count++;
                     }
                 }
                 edgeX = flat.stream().mapToDouble(Double::doubleValue).toArray();
                 nBinsX = edgeX.length - 1;
+            } else {
+                edgeX = computeEdge(X, 10);
+                nBinsX = 10;
             }
         }
 
@@ -103,18 +133,20 @@ public class probxy {
                 edgeY = computeEdge(Y, (int) binY[0][0]);
                 nBinsY = (int) binY[0][0];
             } 
-            else 
-            {
+            else if (binY.length == 1 || binY[0].length == 1) {
                 List<Double> flat = new ArrayList<>();
-                for (int i = 0; i < binY[0].length; i++) 
-                {
-                    for (int j = 0; j < binY.length; j++) 
-                    {
+                int count = 0;
+                for (int i = 0; i < binY[0].length; i++) {
+                    for (int j = 0; j < binY.length; j++) {
                         flat.add(binY[j][i]);
+                        count++;
                     }
                 }
                 edgeY = flat.stream().mapToDouble(Double::doubleValue).toArray();
                 nBinsY = edgeY.length - 1;
+            } else {
+                edgeY = computeEdge(Y, 10);
+                nBinsY = 10;
             }
         }
 
@@ -125,28 +157,28 @@ public class probxy {
         for (int i = 0; i < xBins; i++) 
         {
             List<Double> yFound = new ArrayList<>();
+            int k = 0;
             for (int j = 0; j < X.length; j++) 
             {
                 if (X[j] >= edgeX[i] && X[j] < edgeX[i + 1]) 
                 {
                     yFound.add(Y[j]);
+                    k++;
                 }
             }
 
             int[] yBinCounts = new int[edgeY.length];
-            for (double yVal : yFound) 
-            {
-                for (int p = 0; p < edgeY.length - 1; p++) 
-                {
-                    if (yVal >= edgeY[p] && yVal < edgeY[p + 1]) 
-                    {
-                        yBinCounts[p]++;
+            if (yFound.size() != 0) {
+                for (int j = 0; j < yFound.size(); j++) {
+                    for (int p = 0; p < edgeY.length - 1; p++) {
+                        if (yFound.get(j) >= edgeY[p] && yFound.get(j) < edgeY[p + 1]) {
+                            yBinCounts[p] = yBinCounts[p] + 1;
+                        }
                     }
                 }
+                yBinCounts[yBinCounts.length - 2] = yBinCounts[yBinCounts.length - 2] + yBinCounts[yBinCounts.length - 1];
             }
-
-            yBinCounts[yBinCounts.length - 2] += yBinCounts[yBinCounts.length - 1];
-            yBinCounts = Arrays.copyOf(yBinCounts, yBinCounts.length - 1);
+            yBinCounts = Arrays.copyOfRange(yBinCounts, 0, yBinCounts.length - 1);
 
             for (int j = 0; j < yBins; j++) 
             {
@@ -165,19 +197,19 @@ public class probxy {
         return pxy;
     }
 
-    public static void main(String[] args) 
-    {
-        double[][] input1 = {{1, 2}, {1, 2}, {1, 2}};
-        double[][] input2 = {{2, 4}, {3, 5}, {5, 6}};
-        double[][] customBinsX = {{1, 2, 3}};
-        double[][] customBinsY = {{4, 5, 6}};
+    // public static void main(String[] args) 
+    // {
+    //     double[][] input1 = {{1, 2}, {1, 2}, {1, 2}};
+    //     double[][] input2 = {{2, 4}, {3, 5}, {5, 6}};
+    //     double[][] customBinsX = {{1, 2, 3}};
+    //     double[][] customBinsY = {{4, 5, 6}};
 
-        System.out.println("Test 1:");
-        double[][] out1 = probxy(input1, 2, 3);
-        for (double[] row : out1) System.out.println(Arrays.toString(row));
+    //     System.out.println("Test 1:");
+    //     double[][] out1 = probxy(input1, 2, 3);
+    //     for (double[] row : out1) System.out.println(Arrays.toString(row));
 
-        System.out.println("\nTest 2:");
-        double[][] out2 = probxy(input2, customBinsX, customBinsY);
-        for (double[] row : out2) System.out.println(Arrays.toString(row));
-    }
+    //     System.out.println("\nTest 2:");
+    //     double[][] out2 = probxy(input2, customBinsX, customBinsY);
+    //     for (double[] row : out2) System.out.println(Arrays.toString(row));
+    // }
 }

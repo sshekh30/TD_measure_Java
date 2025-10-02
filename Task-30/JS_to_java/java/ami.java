@@ -43,20 +43,27 @@ public class ami {
         double[] x = null;
         double[] y = null;
 
-        if (n > 2) {
-            System.err.println("Invalid time series data: Time series should be univariate or bivariate");
-        } else if (n == 2) {
-            x = new double[m];
-            y = new double[m];
-            for (int i = 0; i < m; i++) {
-                x[i] = xy[i][0];
-                y[i] = xy[i][1];
+
+        try 
+        {
+            if (n > 2) {
+                throw new IllegalArgumentException();
+            } else if (n == 2) {
+                x = new double[m];
+                y = new double[m];
+                for (int i = 0; i < m; i++) {
+                    x[i] = xy[i][0];
+                    y[i] = xy[i][1];
+                }
+            } else if (m == 1 || n == 1) {
+                double[][] temp = transpose(xy);
+                x = temp[0];
+                y = temp[0];
             }
-        } else if (m == 1 || n == 1) {
-            double[][] temp = transpose(xy);
-            x = temp[0];
-            y = temp[0];
-        }
+        } catch (IllegalArgumentException e) {
+                System.err.println("Invalid data: series should be univariate or bivariate");
+                return null;
+            }
 
         int nBinsRowSize = nBins.length;
         int nBinsColSize = nBins[0].length;
@@ -68,21 +75,39 @@ public class ami {
         }
 
         int xBin, yBin;
-        if ((nBinsRowSize == 2 && n == 2)) {
-            xBin = nBins[0][0];
-            yBin = nBins[1][0];
-        } else if ((nBinsRowSize == 1 && n == 2) || n == 1) {
-            xBin = nBins[0][0];
-            yBin = xBin;
-        } else {
+        try 
+        {
+            if (nBinsRowSize > 2 || nBinsColSize > 1) {
+                throw new IllegalArgumentException();
+            } else if ((nBinsRowSize == 2 && n == 2)) {
+                xBin = (int) Math.floor(nBins[0][0]);
+                yBin = (int) Math.floor(nBins[1][0]);
+            } else if ((nBinsRowSize == 1 && n == 2) || n == 1) {
+                xBin = (int) Math.floor(nBins[0][0]);
+                yBin = xBin;
+            } else {
+                throw new IllegalArgumentException();
+            }
+        } catch (IllegalArgumentException e) {
             System.err.println("Invalid bin size: It should be either vector of 2 elements or scalar");
             return null;
         }
 
-        if (nLags < 0 || nLags > m) {
-            System.err.println("Invalid lag: It should be non-negative and <= length of time series data");
+        try 
+        {
+            if (nLags < 0) {
+                System.err.println("Invalid lag: It should be a positive scalar");
+                throw new IllegalArgumentException();
+            }
+            if (nLags > m) {
+                System.err.println("Invalid lag: It should not be greater than length of time series data");
+                throw new IllegalArgumentException();
+            }
+        } catch (IllegalArgumentException e) {
             return null;
         }
+
+        nLags = (int) Math.floor(nLags);
 
         double[][] amis = new double[1][nLags + 1];
         double[][] corrs = new double[1][nLags + 1];
@@ -134,20 +159,22 @@ public class ami {
         return transposed;
     }
 
-    public static void main(String[] args) {
-        double[][] xy = {{11, 69}, {54, 74}, {98, 8}, {19, 18}, {29, 90}};
-        int[][] nBins = {{5, 2}};
-        int nLags = 3;
+//     public static void main(String[] args) {
+//         double[][] xy ={ };
+//         int[][] nBins = {{10}};
+//         int nLags = 0;
 
-        Object[] result = ami(xy, nBins, nLags);
+//         Object[] result = ami(xy, nBins, nLags);
 
-        double[][] amis = (double[][]) result[0];
-        double[][] corrs = (double[][]) result[1];
+//         if (result != null) {
+//             double[][] amis = (double[][]) result[0];
+//             double[][] corrs = (double[][]) result[1];
 
-        System.out.println("AMI:");
-        for (double[] row : amis) System.out.println(Arrays.toString(row));
+//             System.out.println("AMI:");
+//             for (double[] row : amis) System.out.println(Arrays.toString(row));
 
-        System.out.println("\nCorr:");
-        for (double[] row : corrs) System.out.println(Arrays.toString(row));
-    }
+//             System.out.println("\nCorr:");
+//             for (double[] row : corrs) System.out.println(Arrays.toString(row));
+//         }
+//     }
 }
