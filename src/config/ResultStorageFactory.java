@@ -5,17 +5,21 @@ import dao.*;
 public class ResultStorageFactory {
 
     public static ResultStorageDAO createResultStorage(
-        ConfigManager config,
-        String sourceType
+            ConfigManager config,
+            String sourceType
     ) {
         switch (sourceType.toLowerCase()) {
             case "file":
                 return new FileResultStorageDAOImpl("results/result.jsonl");
-            // case "mongo":
-            //     return new MongoResultStorageDAOImpl();
+            case "mongo":
+                return new MongoResultStorageDAOImpl(
+                        config.getMongoUri(),
+                        config.getMongoDatabase(),
+                        config.getMongoCollection()
+                );
             default:
                 throw new IllegalArgumentException(
-                    "Unknown data source type: " + sourceType
+                        "Unknown data source type: " + sourceType
                 );
         }
     }
