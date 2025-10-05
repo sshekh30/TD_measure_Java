@@ -79,6 +79,10 @@ public class Main {
             new ServletHolder(new SessionServlet(sessionEntropyService)),
             "/session/*"
         );
+        context.addServlet(
+            new ServletHolder(new TeamDynamicsServlet(sessionEntropyService)),
+            "/teamdynamics/*"
+        );
         server.start();
         System.out.println("Server started on 8080");
         server.join();
