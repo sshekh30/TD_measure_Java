@@ -166,7 +166,7 @@ public class SessionEntropyService {
                         dataSourceType
                 );
 
-        List<String> rawData = dataSource.readData();
+        List<String> rawData = dataSource.readData(sessionID);
         List<List<List<String>>> layers = parser.parseToSTTCLayers(rawData);
         SessionMetadata sessionMetadata = parser.getSessionMetadata();
         String[][][] layerData = convertToArray(layers);

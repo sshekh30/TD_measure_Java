@@ -1,9 +1,9 @@
 package dao;
 
-import java.util.*;
 import java.io.*;
-
+import java.util.*;
 
 public interface DataSourceDAO {
-    List<String> readData() throws IOException;
+
+    public List<String> readData(String sessionId) throws IOException;
 }

@@ -22,9 +22,10 @@ public class MongoDataSourceDAOImpl implements DataSourceDAO {
     }
 
     @Override
-    public List<String> readData() throws IOException {
+    public List<String> readData(String sessionId) throws IOException {
         List<String> jsonStrings = new ArrayList<>();
 
+        Document query = new Document("sessionID", sessionId);
         try (MongoClient mongoClient = MongoClients.create(mongoUri)) {
             System.out.println("=== Available Databases ===");
             for (String name : mongoClient.listDatabaseNames()) {
@@ -40,7 +41,7 @@ public class MongoDataSourceDAOImpl implements DataSourceDAO {
                 System.out.println("Collection: " + collName);
             }
             System.out.println("=========================");
-            for (Document doc : collection.find()) {
+            for (Document doc : collection.find(query)) {
                 doc.remove("_id");
                 doc.remove("_kafka_topic");
                 doc.remove("_kafka_partition");

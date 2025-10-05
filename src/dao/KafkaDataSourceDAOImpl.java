@@ -20,7 +20,7 @@ public class KafkaDataSourceDAOImpl implements DataSourceDAO {
     }
 
     @Override 
-    public List<String> readData() throws IOException {
+    public List<String> readData(String sessionID) throws IOException {
         List<String> messages = new ArrayList<>();
 
         Properties props = new Properties();
