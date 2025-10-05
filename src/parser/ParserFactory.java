@@ -9,7 +9,7 @@ public class ParserFactory {
             case "kafka":
                 throw new IllegalArgumentException("Unknown parser type: " + dataSourceType);
             case "mongo":
-                return new MongoBatchParser();
+                return new FileFormatParser();
             default:
                 throw new IllegalArgumentException("Unknown parser type: " + dataSourceType);
         }
