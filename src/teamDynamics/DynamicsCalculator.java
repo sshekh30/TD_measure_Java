@@ -12,27 +12,19 @@ public class DynamicsCalculator {
 
     private double[][] prepareEntropyMatrix(Map<EntropyLayer, double[]> sessionEntropyMap) {
 
-        // Define the required keys using the ENUM CONSTANTS
         EntropyLayer keyTrainee1 = EntropyLayer.TRAINEE1;
         EntropyLayer keyTrainee2 = EntropyLayer.TRAINEE2;
         EntropyLayer keyTrainee3 = EntropyLayer.TRAINEE3;
         EntropyLayer keyTeam = EntropyLayer.TEAM;
 
-        // 💥 FIX: Check containment using the ENUM constant 💥
         if (sessionEntropyMap.isEmpty() || !sessionEntropyMap.containsKey(keyTrainee1)) {
-            // Return 0x4 matrix for cleaner handling by subsequent code
             return new double[0][4];
         }
-
-        // Get total time using the TRAINEE1 key
         double[] trainee1Array = sessionEntropyMap.get(keyTrainee1);
         int totalTime = trainee1Array.length;
-
-        // Matrix columns: T1, T2, T3, Team
         double[][] dataMatrix = new double[totalTime][4];
 
         for (int t = 0; t < totalTime; t++) {
-            // 💥 FIX: Access data using the ENUM constant 💥
             dataMatrix[t][0] = sessionEntropyMap.get(keyTrainee1)[t];
             dataMatrix[t][1] = sessionEntropyMap.get(keyTrainee2)[t];
             dataMatrix[t][2] = sessionEntropyMap.get(keyTrainee3)[t];
@@ -64,6 +56,26 @@ public class DynamicsCalculator {
             }
         }
         return communicationMatrix;
+    }
+
+    public static Map<String, List<Object>> replaceTraineeKeys(
+            Map<String, List<Object>> metricsMap,
+            Map<String, String> traineeRoles
+    ) {
+        Map<String, List<Object>> mappedMetrics = new LinkedHashMap<>();
+
+        for (Map.Entry<String, List<Object>> entry : metricsMap.entrySet()) {
+            String oldKey = entry.getKey();
+            List<Object> values = entry.getValue();
+
+            if (traineeRoles.containsKey(oldKey)) {
+                String newKey = traineeRoles.get(oldKey);
+                mappedMetrics.put(newKey, values);
+            } else {
+                mappedMetrics.put(oldKey, values);
+            }
+        }
+        return mappedMetrics;
     }
 
     private static Map<String, List<Object>> combineFinalResults(

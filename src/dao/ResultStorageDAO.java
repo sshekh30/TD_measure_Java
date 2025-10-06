@@ -12,8 +12,8 @@ public interface ResultStorageDAO {
 
     public SessionEntropyData readEntropy(String sessionID) throws IOException;
 
-    public void writeTeamDynamics(String sessionID, Map<String, List<Object>> teamDynamics)
+    public void writeTeamDynamics(String sessionID,String scenarioID, Map<String, List<Object>> teamDynamics)
             throws IOException;
-
+    
     public Map<String, List<Object>> readTeamDynamics(String sessionID) throws IOException;
 }

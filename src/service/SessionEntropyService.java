@@ -76,7 +76,7 @@ public class SessionEntropyService {
         return defaultResultStorage.readEntropy(sessionId);
     }
 
-    public Map<String,List<Object>> getEntireSessionTeamDynamics(String sessionId)
+    public Map<String, List<Object>> getEntireSessionTeamDynamics(String sessionId)
             throws IOException {
         return defaultResultStorage.readTeamDynamics(sessionId);
     }
@@ -168,6 +168,7 @@ public class SessionEntropyService {
 
         List<String> rawData = dataSource.readData(sessionID);
         List<List<List<String>>> layers = parser.parseToSTTCLayers(rawData);
+        Map<String, String> traineeRoles = parser.getTraineeInfo(rawData);
         SessionMetadata sessionMetadata = parser.getSessionMetadata();
         String[][][] layerData = convertToArray(layers);
 
@@ -365,6 +366,11 @@ public class SessionEntropyService {
                     scenarioId,
                     new EntropyObject(scenarioLayers)
             );
+
+            DynamicsCalculator dynamicsFacade = new DynamicsCalculator();
+            Map<String, List<Object>> teamDynamics = dynamicsFacade.calculateDynamics(scenarioLayers, layers);
+            Map<String, List<Object>> roleMappedDynamics = dynamicsFacade.replaceTraineeKeys(teamDynamics, traineeRoles);
+            resultStorageDAO.writeTeamDynamics(sessionID, scenarioId, roleMappedDynamics);
         }
 
         Map<String, EntropyObject> perturbationEntropyMap = new HashMap<>();
@@ -479,9 +485,6 @@ public class SessionEntropyService {
 
         EntropyObject sessionEntropy = new EntropyObject(sessionEntropyMap);
 
-        DynamicsCalculator dynamicsFacade = new DynamicsCalculator();
-        Map<String, List<Object>> teamDynamics = dynamicsFacade.calculateDynamics(sessionEntropyMap, layers);
-
         SessionEntropyData sessionEntropyData = new SessionEntropyData(
                 sessionID,
                 sessionEntropy,
@@ -489,6 +492,5 @@ public class SessionEntropyService {
                 perturbationEntropyMap
         );
         resultStorageDAO.writeEntropy(sessionEntropyData);
-        resultStorageDAO.writeTeamDynamics(sessionID, teamDynamics);
     }
 }

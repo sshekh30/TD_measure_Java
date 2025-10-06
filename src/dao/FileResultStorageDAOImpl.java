@@ -39,7 +39,7 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
         }
     }
 
-    public void writeTeamDynamics(String sessionID, Map<String, List<Object>> teamDynamicsMap)
+    public void writeTeamDynamics(String sessionID,String scenarioID, Map<String, List<Object>> teamDynamicsMap)
             throws IOException {
 
         String dynamicsFilePath = filePath.replace(".jsonl", "_dynamics.jsonl");
@@ -52,6 +52,7 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
 
         Map<String, Object> record = new java.util.LinkedHashMap<>();
         record.put("sessionID", sessionID);
+        record.put("scenarioID", scenarioID);
         record.put("teamDynamics", teamDynamicsMap);
 
         String jsonLine = json.writeValueAsString(record);

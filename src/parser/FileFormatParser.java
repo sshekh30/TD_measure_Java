@@ -424,6 +424,47 @@ public class FileFormatParser implements DataParser {
     }
 
     @Override
+    public Map<String, String> getTraineeInfo(List<String> rawData) {
+        Map<String, String> traineeRoles = new LinkedHashMap<>(); // Use LinkedHashMap for insertion order
+
+        for (String line : rawData) {
+            try {
+                JsonNode node = mapper.readTree(line);
+                JsonNode eventNode = node.get("scenarioEvent");
+                if (eventNode == null || !"ScenarioDefinition".equals(eventNode.asText())) {
+                    continue;
+                }
+                JsonNode scenarioNode = node.get("Scenario");
+                if (scenarioNode == null) {
+                    continue;
+                }
+
+                JsonNode traineesNode = scenarioNode.get("Trainees");
+
+                if (traineesNode != null && traineesNode.isArray()) {
+                    int count = 1; 
+                    for (JsonNode trainee : traineesNode) {
+                        JsonNode idNode = trainee.get("id");
+                        JsonNode roleNode = trainee.get("role");
+
+                        if (idNode != null && roleNode != null) {
+                            String traineeId = "trainee" + count; 
+                            String role = roleNode.asText();
+
+                            traineeRoles.put(traineeId, role);
+                            count++;
+                        }
+                    }
+                    break;
+                }
+            } catch (Exception e) {
+                System.err.println("Error parsing line in getTraineeInfo: " + e.getMessage());
+            }
+        }
+        return traineeRoles;
+    }
+
+    @Override
     public List<List<List<String>>> parseToSTTCLayers(List<String> rawData)
             throws IOException {
         boolean logging = true;
