@@ -58,7 +58,7 @@ public class Main {
             config
         );
 
-        Server server = new Server(8080);
+        Server server = new Server(8081);
 
         ServletContextHandler context = new ServletContextHandler(
             ServletContextHandler.SESSIONS
@@ -79,7 +79,7 @@ public class Main {
             "/teamdynamics/*"
         );
         server.start();
-        System.out.println("Server started on 8080");
+        System.out.println("Server started on 8081");
         server.join();
     }
 }
