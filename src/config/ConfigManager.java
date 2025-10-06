@@ -14,7 +14,7 @@ public class ConfigManager {
     }
 
     public String getDataSourceType() {
-        return properties.getProperty("data.source.type", "file");
+        return properties.getProperty("data.source.type", "mongo");
     }
 
     public String getFilePath() {
@@ -34,15 +34,15 @@ public class ConfigManager {
     }
 
     public String getMongoUri() {
-        return properties.getProperty("mongo.uri", "mongodb://localhost:27017");
+        return properties.getProperty("mongo.uri", "mongodb://10.203.43.162:27017");
     }
     
     public String getMongoDatabase() {
-        return properties.getProperty("mongo.database", "gift");
+        return properties.getProperty("mongo.database", "Gift-Unity");
     }
     
     public String getMongoCollection() {
-        return properties.getProperty("mongo.collection", "kafka_messages");
+        return properties.getProperty("mongo.collection", "scenario-topic");
     }
 
 }

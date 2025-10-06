@@ -11,7 +11,7 @@ import javax.servlet.http.HttpServletResponse;
 import service.SessionEntropyService;
 import javax.servlet.annotation.WebServlet;
 
-@WebServlet(urlPatterns = { "/teamdynamics/*" })
+@WebServlet(urlPatterns = {"/teamdynamics/*"})
 public class TeamDynamicsServlet extends HttpServlet {
 
     private SessionEntropyService service;
@@ -28,29 +28,39 @@ public class TeamDynamicsServlet extends HttpServlet {
 
     @Override
     protected void doGet(
-        HttpServletRequest request,
-        HttpServletResponse response
+            HttpServletRequest request,
+            HttpServletResponse response
     ) throws ServletException, IOException {
-        
+
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        
+
         String sessionId = request.getParameter("sessionId");
-        
+        String scenarioId = request.getParameter("scenarioId");
+        String dataSourceType = request.getParameter("dataSourceType");
+
+        String resolvedDataSourceType = (dataSourceType != null && !dataSourceType.trim().isEmpty())
+                ? dataSourceType 
+                : "mongo";        
+
         if (sessionId == null || sessionId.isEmpty()) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             sendJsonError(response, "sessionId parameter is required (e.g., /teamdynamics?sessionId=session_id_here).");
             return;
+        } else if (scenarioId == null || scenarioId.isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            sendJsonError(response, "scenarioId parameter is required (e.g., /teamdynamics?scenarioId=scenario_id_here).");
+            return;
         }
 
         try {
-            System.out.println("GET /teamdynamics - sessionId: " + sessionId);
-            
-            Map<String, List<Object>> teamDynamics = service.getEntireSessionTeamDynamics(sessionId);
+            System.out.println("GET /teamdynamics - sessionId: " + sessionId + ", scenarioId: " + scenarioId);
+
+            Map<String, List<Object>> teamDynamics = service.getScenarioTeamDynamics(sessionId, scenarioId, resolvedDataSourceType);
 
             if (teamDynamics == null || teamDynamics.isEmpty()) {
                 response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-                sendJsonError(response, "Team Dynamics not found for session ID: " + sessionId);
+                sendJsonError(response, "Team Dynamics not found for session ID: " + sessionId + " and scenario ID: " + scenarioId);
                 return;
             }
 
@@ -64,7 +74,7 @@ public class TeamDynamicsServlet extends HttpServlet {
     }
 
     private void sendJsonResponse(HttpServletResponse resp, Object data)
-        throws IOException {
+            throws IOException {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         resp.setStatus(HttpServletResponse.SC_OK);
@@ -72,7 +82,7 @@ public class TeamDynamicsServlet extends HttpServlet {
     }
 
     private void sendJsonError(HttpServletResponse resp, String message)
-        throws IOException {
+            throws IOException {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
         resp.getWriter().write(json.writeValueAsString(Map.of("error", message)));

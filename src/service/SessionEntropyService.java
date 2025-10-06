@@ -76,9 +76,14 @@ public class SessionEntropyService {
         return defaultResultStorage.readEntropy(sessionId);
     }
 
-    public Map<String, List<Object>> getEntireSessionTeamDynamics(String sessionId)
+    public Map<String, List<Object>> getScenarioTeamDynamics(String sessionId, String scenarioId, String dataSourceType)
             throws IOException {
-        return defaultResultStorage.readTeamDynamics(sessionId);
+        ResultStorageDAO resultStorageDAO
+                = ResultStorageFactory.createResultStorage(
+                        defaultConfig,
+                        dataSourceType
+                );
+        return resultStorageDAO.readTeamDynamics(sessionId, scenarioId);
     }
 
     public EntropyObject getEntropyForScenario(

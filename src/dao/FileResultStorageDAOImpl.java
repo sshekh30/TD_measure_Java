@@ -6,6 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import model.*;
@@ -39,9 +40,10 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
         }
     }
 
-    public void writeTeamDynamics(String sessionID,String scenarioID, Map<String, List<Object>> teamDynamicsMap)
+    public void writeTeamDynamics(String sessionID, String scenarioID, Map<String, List<Object>> teamDynamicsMap)
             throws IOException {
 
+        // Define the target file path
         String dynamicsFilePath = filePath.replace(".jsonl", "_dynamics.jsonl");
         File file = new File(dynamicsFilePath);
 
@@ -50,13 +52,41 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
             file.createNewFile();
         }
 
-        Map<String, Object> record = new java.util.LinkedHashMap<>();
+        // The labels that define the order in the input List<Object>
+        final String[] METRIC_LABELS = {"Enaction", "Adaptation", "Recovery", "Influence"};
+
+        // Map to hold the final labeled metrics for all subjects (Trainees + Team)
+        Map<String, Map<String, Object>> labeledDynamics = new LinkedHashMap<>();
+
+        // 1. Iterate over subjects (e.g., "Medsupplier", "team")
+        for (Map.Entry<String, List<Object>> entry : teamDynamicsMap.entrySet()) {
+            String subjectKey = entry.getKey();
+            List<Object> rawMetrics = entry.getValue();
+
+            Map<String, Object> subjectMetrics = new LinkedHashMap<>();
+
+            // 2. Map the raw values to their corresponding labels
+            if (rawMetrics.size() == METRIC_LABELS.length) {
+                for (int i = 0; i < METRIC_LABELS.length; i++) {
+                    subjectMetrics.put(METRIC_LABELS[i], rawMetrics.get(i));
+                }
+            } else {
+                // Fallback for unexpected size
+                subjectMetrics.put("Raw_Data", rawMetrics);
+            }
+
+            labeledDynamics.put(subjectKey, subjectMetrics);
+        }
+
+        // 3. Create the final top-level record, ensuring sessionID comes first
+        Map<String, Object> record = new LinkedHashMap<>();
         record.put("sessionID", sessionID);
         record.put("scenarioID", scenarioID);
-        record.put("teamDynamics", teamDynamicsMap);
+        record.put("teamDynamics", labeledDynamics); // Store the newly labeled structure
 
         String jsonLine = json.writeValueAsString(record);
 
+        // 4. Write the labeled record to the file
         try (FileWriter writer = new FileWriter(file, true)) {
             writer.write(jsonLine + "\n");
         }
@@ -82,7 +112,8 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
         return null;
     }
 
-    public Map<String, List<Object>> readTeamDynamics(String sessionID) throws IOException {
+    @Override
+    public Map<String, List<Object>> readTeamDynamics(String sessionID, String scenarioID) throws IOException {
 
         String dynamicsFilePath = filePath.replace(".jsonl", "_dynamics.jsonl");
         File file = new File(dynamicsFilePath);
@@ -98,7 +129,9 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
             Map<String, Object> wrapperData = json.readValue(line, Map.class);
 
             if (wrapperData.containsKey("sessionID")
-                    && wrapperData.get("sessionID").equals(sessionID)) {
+                    && wrapperData.get("sessionID").equals(sessionID)
+                    && wrapperData.containsKey("scenarioID")
+                    && wrapperData.get("scenarioID").equals(scenarioID)) {
 
                 if (wrapperData.containsKey("teamDynamics")) {
                     @SuppressWarnings("unchecked")
@@ -107,7 +140,7 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
                 }
             }
         }
-
-        return null; 
+        System.out.println("No Team Dynamics found for Session ID: " + sessionID + ", Scenario ID: " + scenarioID);
+        return null;
     }
 }

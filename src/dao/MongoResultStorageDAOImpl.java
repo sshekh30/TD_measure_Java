@@ -74,10 +74,28 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
                         + sessionID + ", Scenario ID: " + scenarioID);
                 return; 
             }
+            final String[] METRIC_LABELS = {"Enaction", "Adaptation", "Recovery", "Influence"};
+            Map<String, Map<String, Object>> labeledDynamics = new java.util.LinkedHashMap<>();
+
+            for (Map.Entry<String, List<Object>> entry : teamDynamics.entrySet()) {
+                String subjectKey = entry.getKey(); 
+                List<Object> rawMetrics = entry.getValue(); 
+
+                Map<String, Object> subjectMetrics = new java.util.LinkedHashMap<>();
+                if (rawMetrics.size() == METRIC_LABELS.length) {
+                    for (int i = 0; i < METRIC_LABELS.length; i++) {
+                        subjectMetrics.put(METRIC_LABELS[i], rawMetrics.get(i));
+                    }
+                } else {
+                    subjectMetrics.put("Raw_Data", rawMetrics);
+                }
+
+                labeledDynamics.put(subjectKey, subjectMetrics);
+            }
             Map<String, Object> record = new java.util.LinkedHashMap<>();
             record.put("sessionID", sessionID);
-            record.put("scenarioID", scenarioID); 
-            record.put("teamDynamics", teamDynamics);
+            record.put("scenarioID", scenarioID);
+            record.put("teamDynamics", labeledDynamics);
 
             String jsonString = json.writeValueAsString(record);
             Document doc = Document.parse(jsonString);
@@ -114,13 +132,14 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
     }
 
     @Override
-    public Map<String, List<Object>> readTeamDynamics(String sessionID) throws IOException {
+    public Map<String, List<Object>> readTeamDynamics(String sessionID, String scenarioID) throws IOException {
 
         String collectionName = mongoCollection + DYNAMICS_COLLECTION_SUFFIX;
 
         try {
             MongoCollection<Document> collection = getCollection(DYNAMICS_COLLECTION_SUFFIX);
-            Document query = new Document("sessionID", sessionID);
+            Document query = new Document("sessionID", sessionID)
+                    .append("scenarioID", scenarioID);
             Document result = collection.find(query).first();
 
             if (result != null) {
@@ -131,6 +150,10 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
                 if (wrapperData.containsKey("teamDynamics")) {
                     @SuppressWarnings("unchecked")
                     Map<String, List<Object>> teamDynamics = (Map<String, List<Object>>) wrapperData.get("teamDynamics");
+                    if (teamDynamics != null) {
+                        System.out.println("MongoDB: Successfully read Team Dynamics for Session ID: "
+                                + sessionID + ", Scenario ID: " + scenarioID);
+                    }
                     return teamDynamics;
                 }
             }

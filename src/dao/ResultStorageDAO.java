@@ -15,5 +15,5 @@ public interface ResultStorageDAO {
     public void writeTeamDynamics(String sessionID,String scenarioID, Map<String, List<Object>> teamDynamics)
             throws IOException;
     
-    public Map<String, List<Object>> readTeamDynamics(String sessionID) throws IOException;
+    public Map<String, List<Object>> readTeamDynamics(String sessionID, String scenarioID) throws IOException;
 }
