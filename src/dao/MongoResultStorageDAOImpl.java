@@ -21,6 +21,7 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
 
     private final String ENTROPY_COLLECTION_SUFFIX = "-entropy";
     private final String DYNAMICS_COLLECTION_SUFFIX = "-dynamics";
+    private final String METADATA_COLLECTION_SUFFIX = "-metadata";
 
     public MongoResultStorageDAOImpl(
         String mongoUri,
@@ -37,6 +38,41 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
         MongoClient mongoClient = MongoClients.create(mongoUri);
         MongoDatabase db = mongoClient.getDatabase(mongoDatabase);
         return db.getCollection(mongoCollection + suffix);
+    }
+
+    @Override
+    public void writeMetadata(SessionMetadata sessionMetadata)
+        throws IOException {
+        String collectionName = mongoCollection + METADATA_COLLECTION_SUFFIX;
+
+        try {
+            String jsonString = json.writeValueAsString(sessionMetadata);
+
+            MongoCollection<Document> collection = getCollection(
+                METADATA_COLLECTION_SUFFIX
+            );
+            Document doc = Document.parse(jsonString);
+
+            Document filter = new Document(
+                "sessionID",
+                sessionMetadata.getSessionID()
+            );
+            collection.replaceOne(
+                filter,
+                doc,
+                new ReplaceOptions().upsert(true)
+            );
+
+            System.out.println(
+                "MongoDB: Successfully wrote Session Metadata to collection: " +
+                    collectionName
+            );
+        } catch (Exception e) {
+            throw new IOException(
+                "MongoDB Error writing metadata: " + e.getMessage(),
+                e
+            );
+        }
     }
 
     @Override
@@ -176,6 +212,34 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
         } catch (Exception e) {
             throw new IOException(
                 "MongoDB Error reading entropy data: " + e.getMessage(),
+                e
+            );
+        }
+    }
+
+    @Override
+    public SessionMetadata readMetadata(String sessionID) throws IOException {
+        String collectionName = mongoCollection + METADATA_COLLECTION_SUFFIX;
+
+        try {
+            MongoCollection<Document> collection = getCollection(
+                METADATA_COLLECTION_SUFFIX
+            );
+            Document query = new Document("sessionID", sessionID);
+            Document result = collection.find(query).first();
+
+            if (result != null) {
+                String jsonString = result.toJson();
+                return json.readValue(jsonString, SessionMetadata.class);
+            }
+            System.out.println(
+                "MongoDB: Read attempt for SessionMetadata from collection: " +
+                    collectionName
+            );
+            return null;
+        } catch (Exception e) {
+            throw new IOException(
+                "MongoDB Error reading metadata: " + e.getMessage(),
                 e
             );
         }

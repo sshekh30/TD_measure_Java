@@ -13,8 +13,7 @@ import model.*;
 
 public class FileResultStorageDAOImpl implements ResultStorageDAO {
 
-    public FileResultStorageDAOImpl() {
-    }
+    public FileResultStorageDAOImpl() {}
 
     private ObjectMapper json;
     private String filePath;
@@ -24,8 +23,18 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
         this.json = new ObjectMapper();
     }
 
+    @Override
+    public SessionMetadata readMetadata(String sessionID) {
+        return new SessionMetadata();
+    }
+
+    @Override
+    public void writeMetadata(SessionMetadata sessionMetadata)
+        throws IOException {}
+
+    @Override
     public void writeEntropy(SessionEntropyData sessionEntropyData)
-            throws IOException {
+        throws IOException {
         File file = new File(filePath);
 
         if (!file.exists()) {
@@ -40,9 +49,12 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
         }
     }
 
-    public void writeTeamDynamics(String sessionID, String scenarioID, Map<String, List<Object>> teamDynamicsMap)
-            throws IOException {
-
+    @Override
+    public void writeTeamDynamics(
+        String sessionID,
+        String scenarioID,
+        Map<String, List<Object>> teamDynamicsMap
+    ) throws IOException {
         // Define the target file path
         String dynamicsFilePath = filePath.replace(".jsonl", "_dynamics.jsonl");
         File file = new File(dynamicsFilePath);
@@ -53,13 +65,22 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
         }
 
         // The labels that define the order in the input List<Object>
-        final String[] METRIC_LABELS = {"Enaction", "Adaptation", "Recovery", "Influence"};
+        final String[] METRIC_LABELS = {
+            "Enaction",
+            "Adaptation",
+            "Recovery",
+            "Influence",
+        };
 
         // Map to hold the final labeled metrics for all subjects (Trainees + Team)
-        Map<String, Map<String, Object>> labeledDynamics = new LinkedHashMap<>();
+        Map<String, Map<String, Object>> labeledDynamics =
+            new LinkedHashMap<>();
 
         // 1. Iterate over subjects (e.g., "Medsupplier", "team")
-        for (Map.Entry<String, List<Object>> entry : teamDynamicsMap.entrySet()) {
+        for (Map.Entry<
+            String,
+            List<Object>
+        > entry : teamDynamicsMap.entrySet()) {
             String subjectKey = entry.getKey();
             List<Object> rawMetrics = entry.getValue();
 
@@ -91,9 +112,12 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
             writer.write(jsonLine + "\n");
         }
 
-        System.out.println("Team Dynamics results written to: " + dynamicsFilePath);
+        System.out.println(
+            "Team Dynamics results written to: " + dynamicsFilePath
+        );
     }
 
+    @Override
     public SessionEntropyData readEntropy(String sessionID) throws IOException {
         File file = new File(filePath);
         if (!file.exists()) {
@@ -102,8 +126,8 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
         List<String> lines = Files.readAllLines(Paths.get(filePath));
         for (String line : lines) {
             SessionEntropyData data = json.readValue(
-                    line,
-                    SessionEntropyData.class
+                line,
+                SessionEntropyData.class
             );
             if (data.getSessionID().equals(sessionID)) {
                 return data;
@@ -113,8 +137,10 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
     }
 
     @Override
-    public Map<String, List<Object>> readTeamDynamics(String sessionID, String scenarioID) throws IOException {
-
+    public Map<String, List<Object>> readTeamDynamics(
+        String sessionID,
+        String scenarioID
+    ) throws IOException {
         String dynamicsFilePath = filePath.replace(".jsonl", "_dynamics.jsonl");
         File file = new File(dynamicsFilePath);
 
@@ -128,19 +154,28 @@ public class FileResultStorageDAOImpl implements ResultStorageDAO {
             @SuppressWarnings("unchecked")
             Map<String, Object> wrapperData = json.readValue(line, Map.class);
 
-            if (wrapperData.containsKey("sessionID")
-                    && wrapperData.get("sessionID").equals(sessionID)
-                    && wrapperData.containsKey("scenarioID")
-                    && wrapperData.get("scenarioID").equals(scenarioID)) {
-
+            if (
+                wrapperData.containsKey("sessionID") &&
+                wrapperData.get("sessionID").equals(sessionID) &&
+                wrapperData.containsKey("scenarioID") &&
+                wrapperData.get("scenarioID").equals(scenarioID)
+            ) {
                 if (wrapperData.containsKey("teamDynamics")) {
                     @SuppressWarnings("unchecked")
-                    Map<String, List<Object>> teamDynamics = (Map<String, List<Object>>) wrapperData.get("teamDynamics");
+                    Map<String, List<Object>> teamDynamics = (Map<
+                        String,
+                        List<Object>
+                    >) wrapperData.get("teamDynamics");
                     return teamDynamics;
                 }
             }
         }
-        System.out.println("No Team Dynamics found for Session ID: " + sessionID + ", Scenario ID: " + scenarioID);
+        System.out.println(
+            "No Team Dynamics found for Session ID: " +
+                sessionID +
+                ", Scenario ID: " +
+                scenarioID
+        );
         return null;
     }
 }

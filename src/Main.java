@@ -4,10 +4,14 @@ import java.util.*;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import service.*;
 import servlet.*;
 
 public class Main {
+
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
 
     public static void dumpToCSV(double[][] data, String fileName) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) {
@@ -50,16 +54,19 @@ public class Main {
     }
 
     public static void main(String[] Args) throws Exception {
+        logger.info("Initializing STTC-Entropy Server");
+
         ConfigManager config = new ConfigManager(
             "resources/runtime.properties"
         );
+        logger.debug("Configuration loaded from runtime.properties");
 
         SessionEntropyService sessionEntropyService = new SessionEntropyService(
             config
         );
+        logger.info("SessionEntropyService initialized");
 
         Server server = new Server(8081);
-
         ServletContextHandler context = new ServletContextHandler(
             ServletContextHandler.SESSIONS
         );
@@ -70,16 +77,27 @@ public class Main {
             new ServletHolder(new EntropyServlet(sessionEntropyService)),
             "/entropy/*"
         );
+        logger.info("Registered endpoint: /entropy/*");
+
         context.addServlet(
             new ServletHolder(new SessionServlet(sessionEntropyService)),
             "/session/*"
         );
+        logger.info("Registered endpoint: /session/*");
+
         context.addServlet(
             new ServletHolder(new TeamDynamicsServlet(sessionEntropyService)),
             "/teamdynamics/*"
         );
+        logger.info("Registered endpoint: /teamdynamics/*");
+
         server.start();
-        System.out.println("Server started on 8081");
+        logger.info("Server started successfully on port 8081");
+        logger.info("Available endpoints:");
+        logger.info("  - http://localhost:8081/entropy/*");
+        logger.info("  - http://localhost:8081/session/*");
+        logger.info("  - http://localhost:8081/teamdynamics/*");
+
         server.join();
     }
 }

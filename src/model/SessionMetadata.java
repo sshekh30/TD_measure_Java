@@ -1,12 +1,16 @@
 package model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.Map;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SessionMetadata {
 
     private String sessionID;
     private Map<String, Integer> scenarioIDs;
     private Map<String, Integer> pertubationIDs;
+
+    public SessionMetadata() {}
 
     public SessionMetadata(
         String sessionID,
