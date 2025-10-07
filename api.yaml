@@ -56,7 +56,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Entropy"
+                $ref: "#/components/schemas/EntropyObject"
         "400":
           description: |
             - Invalid session ID supplied
@@ -86,6 +86,17 @@ paths:
                 $ref: "#/components/schemas/Session"
         "400":
           description: Invalid sessionId
+    post:
+      summary: begin entropy caclulation on file
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          description: Invalid sessionId
 
   /sessions:
     get:
@@ -104,22 +115,26 @@ paths:
 
 components:
   schemas:
-    Entropy:
+    EntropyObject:
       type: object
       properties:
         entropy:
-          type: array
-          items:
-            type: number
+          $ref: "#/components/schemas/EntropyData"
         lastCalculated:
           type: string
           format: date-time
         sessionId:
-          type: integer
-        scenarioId:
-          type: integer
-        perturbationId:
-          type: integer
+          type: string
+        scenarioEntropy:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/EntropyData"
+          description: Map of scenario IDs to their entropy data
+        pertubationEntropy:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/EntropyData"
+          description: Map of pertubation IDs to their entropy data
         from:
           type: integer
         to:
@@ -129,6 +144,46 @@ components:
       required:
         - entropy
         - lastCalculated
+
+    EntropyData:
+      type: object
+      properties:
+        visual_layer:
+          type: array
+          items:
+            type: number
+        communication_layer:
+          type: array
+          items:
+            type: number
+        casualty_layer:
+          type: array
+          items:
+            type: number
+        movement_layer:
+          type: array
+          items:
+            type: number
+        trainee1:
+          type: array
+          items:
+            type: number
+        trainee2:
+          type: array
+          items:
+            type: number
+        trainee3:
+          type: array
+          items:
+            type: number
+        system_layer:
+          type: array
+          items:
+            type: number
+        team_layer:
+          type: array
+          items:
+            type: number
 
     Sessions:
       type: object
@@ -156,7 +211,7 @@ components:
         trainees:
           type: array
           items:
-            type: integer
+            type: number
         createdAt:
           type: string
           format: date-time

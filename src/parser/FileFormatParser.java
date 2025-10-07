@@ -21,9 +21,11 @@ public class FileFormatParser implements DataParser {
         for (String line : rawData) {
             try {
                 JsonNode node = mapper.readTree(line);
-                if ("ScenarioDefinition".equals(
+                if (
+                    "ScenarioDefinition".equals(
                         node.get("scenarioEvent").asText()
-                )) {
+                    )
+                ) {
                     initializeCasualties(node);
                     initializeMovementROI(node);
                     break;
@@ -68,23 +70,25 @@ public class FileFormatParser implements DataParser {
             JsonNode regions = scenario.get("RegionsOfInterest");
             if (regions == null) {
                 System.err.println(
-                        "No 'RegionsOfInterest' field found in Scenario"
+                    "No 'RegionsOfInterest' field found in Scenario"
                 );
                 return;
             }
 
             for (JsonNode region : regions) {
                 JsonNode idNode = region.get("id");
-                if (idNode != null
-                        && "MovementLayerImportant".equals(idNode.asText())) {
+                if (
+                    idNode != null &&
+                    "MovementLayerImportant".equals(idNode.asText())
+                ) {
                     double[] location = mapper.treeToValue(
-                            region.get("location"),
-                            double[].class
+                        region.get("location"),
+                        double[].class
                     );
 
                     if (location.length < 6) {
                         System.err.println(
-                                "Location array too short, expected at least 6 elements"
+                            "Location array too short, expected at least 6 elements"
                         );
                         return;
                     }
@@ -94,13 +98,13 @@ public class FileFormatParser implements DataParser {
                     double midX = location[3];
                     double midZ = location[5];
 
-                    movementROI = new double[]{centerX, centerZ, midX, midZ};
+                    movementROI = new double[] { centerX, centerZ, midX, midZ };
                     break;
                 }
             }
         } catch (Exception e) {
             System.err.println(
-                    "Error processing JSON for movement ROI: " + e.getMessage()
+                "Error processing JSON for movement ROI: " + e.getMessage()
             );
         }
     }
@@ -127,7 +131,7 @@ public class FileFormatParser implements DataParser {
             }
         } catch (Exception e) {
             System.err.println(
-                    "Error extracting communication: " + e.getMessage()
+                "Error extracting communication: " + e.getMessage()
             );
         }
         return comms;
@@ -149,7 +153,7 @@ public class FileFormatParser implements DataParser {
                 boolean hasROIWatched = false;
 
                 if (visualArray != null && visualArray.isArray()) {
-                    for (JsonNode va  : visualArray) {
+                    for (JsonNode va : visualArray) {
                         if (va.has("Trainee_Watched")) {
                             hasTraineeWatched = true;
                         }
@@ -244,8 +248,8 @@ public class FileFormatParser implements DataParser {
             for (int i = 0; i < trainees.size(); i++) {
                 JsonNode traineeMovement = trainees.get(i).get("Movement");
                 double[] headCoords = mapper.treeToValue(
-                        traineeMovement.get("Head"),
-                        double[].class
+                    traineeMovement.get("Head"),
+                    double[].class
                 );
 
                 double headX = headCoords[0];
@@ -256,10 +260,10 @@ public class FileFormatParser implements DataParser {
                 double minZ = movementROI[1] - movementROI[3] / 2;
                 double maxZ = movementROI[1] + movementROI[3] / 2;
 
-                boolean isInROI = (headX >= minX
-                        && headX <= maxX
-                        && headZ >= minZ
-                        && headZ <= maxZ);
+                boolean isInROI = (headX >= minX &&
+                    headX <= maxX &&
+                    headZ >= minZ &&
+                    headZ <= maxZ);
                 if (i == 0) {
                     movementStates.add(isInROI ? "40" : "41");
                 }
@@ -278,9 +282,10 @@ public class FileFormatParser implements DataParser {
     }
 
     public static void updateTreatmentStatus(JsonNode jsonObject) {
-        if ("treatment".equals(jsonObject.get("subtype").asText())
-                && "stop".equals(jsonObject.get("event").asText())) {
-
+        if (
+            "treatment".equals(jsonObject.get("subtype").asText()) &&
+            "stop".equals(jsonObject.get("event").asText())
+        ) {
             String subtypeId = jsonObject.get("subtype_id").asText();
             int casualtyId = casualtiesId.get(subtypeId);
             treatmentStatus.put(casualtyId, true);
@@ -375,7 +380,6 @@ public class FileFormatParser implements DataParser {
         String casualtyStringId = "";
 
         for (int casualtyId = 1; casualtyId <= numCasualties; casualtyId++) {
-
             casualtyStringId = casualtyIdReversed.get(casualtyId);
             treatmentValue = treatmentStatus.getOrDefault(casualtyId, false);
 
@@ -431,7 +435,10 @@ public class FileFormatParser implements DataParser {
             try {
                 JsonNode node = mapper.readTree(line);
                 JsonNode eventNode = node.get("scenarioEvent");
-                if (eventNode == null || !"ScenarioDefinition".equals(eventNode.asText())) {
+                if (
+                    eventNode == null ||
+                    !"ScenarioDefinition".equals(eventNode.asText())
+                ) {
                     continue;
                 }
                 JsonNode scenarioNode = node.get("Scenario");
@@ -442,13 +449,13 @@ public class FileFormatParser implements DataParser {
                 JsonNode traineesNode = scenarioNode.get("Trainees");
 
                 if (traineesNode != null && traineesNode.isArray()) {
-                    int count = 1; 
+                    int count = 1;
                     for (JsonNode trainee : traineesNode) {
                         JsonNode idNode = trainee.get("id");
                         JsonNode roleNode = trainee.get("role");
 
                         if (idNode != null && roleNode != null) {
-                            String traineeId = "trainee" + count; 
+                            String traineeId = "trainee" + count;
                             String role = roleNode.asText();
 
                             traineeRoles.put(traineeId, role);
@@ -458,7 +465,9 @@ public class FileFormatParser implements DataParser {
                     break;
                 }
             } catch (Exception e) {
-                System.err.println("Error parsing line in getTraineeInfo: " + e.getMessage());
+                System.err.println(
+                    "Error parsing line in getTraineeInfo: " + e.getMessage()
+                );
             }
         }
         return traineeRoles;
@@ -466,7 +475,7 @@ public class FileFormatParser implements DataParser {
 
     @Override
     public List<List<List<String>>> parseToSTTCLayers(List<String> rawData)
-            throws IOException {
+        throws IOException {
         boolean logging = true;
 
         List<List<List<String>>> sttcLayers = new ArrayList<>();
@@ -503,6 +512,7 @@ public class FileFormatParser implements DataParser {
                 dataFrame.add(traineeMov);
 
                 sttcLayers.add(dataFrame);
+                currentTimeIndex++;
             } else if ("Domain".equals(eventType)) {
                 if ("perturbation".equals(node.get("subtype").asText())) {
                     String perturbationID = node.get("subtype_id").asText();
@@ -523,9 +533,9 @@ public class FileFormatParser implements DataParser {
             }
         }
         this.sessionMetadata = new SessionMetadata(
-                sessionID,
-                scenarioIDs,
-                perturbationIDs
+            sessionID,
+            scenarioIDs,
+            perturbationIDs
         );
         if (logging) {
             System.out.println("======Visual Layer: ======");
@@ -544,26 +554,26 @@ public class FileFormatParser implements DataParser {
 
                 if (timeInstance.size() >= 4) {
                     System.out.println(
-                            "  Communication: " + timeInstance.get(0)
+                        "  Communication: " + timeInstance.get(0)
                     );
                     System.out.println(
-                            "  Visual:        " + timeInstance.get(1)
+                        "  Visual:        " + timeInstance.get(1)
                     );
                     System.out.println(
-                            "  Casualty:      " + timeInstance.get(2)
+                        "  Casualty:      " + timeInstance.get(2)
                     );
                     System.out.println(
-                            "  Movement:      " + timeInstance.get(3)
+                        "  Movement:      " + timeInstance.get(3)
                     );
                 } else {
                     System.out.println(
-                            "  Incomplete data - only "
-                            + timeInstance.size()
-                            + " layers"
+                        "  Incomplete data - only " +
+                            timeInstance.size() +
+                            " layers"
                     );
                     for (int layer = 0; layer < timeInstance.size(); layer++) {
                         System.out.println(
-                                "  Layer " + layer + ": " + timeInstance.get(layer)
+                            "  Layer " + layer + ": " + timeInstance.get(layer)
                         );
                     }
                 }
