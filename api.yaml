@@ -112,6 +112,48 @@ paths:
                 $ref: "#/components/schemas/Sessions"
         "500":
           description: server error
+  
+  /teamdynamics:
+    get:
+      tags:
+        - dynamics
+      summary: Fetch team dynamics for a specific scenario within a session
+      parameters:
+        - name: sessionId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: scenarioId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: dataSourceType
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Data source type (e.g., "mongo", "file"). Defaults to "mongo" if not provided.
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: object
+        "400":
+          description: |
+            - Invalid session ID supplied
+            - Missing session ID or scenario ID
+        "404":
+          description: session ID or scenario ID not found
+        "500":
+          description: server error
 
 components:
   schemas:
