@@ -15,7 +15,8 @@ public class ResultStorageFactory {
                 return new MongoResultStorageDAOImpl(
                         config.getMongoUri(),
                         config.getMongoDatabase(),
-                        config.getMongoCollection()
+                        config.getMongoCollection(),
+                        config.getCsvExportDirectory()
                 );
             default:
                 throw new IllegalArgumentException(

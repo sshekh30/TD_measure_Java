@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Map;
 import model.*;
 import org.bson.Document;
+import java.io.FileWriter; 
+import java.io.PrintWriter;
 
 public class MongoResultStorageDAOImpl implements ResultStorageDAO {
 
@@ -19,6 +21,8 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
     private final String mongoDatabase;
     private final String mongoCollection;
 
+    private final String csvExportDirectory;
+    
     private final String ENTROPY_COLLECTION_SUFFIX = "-entropy";
     private final String DYNAMICS_COLLECTION_SUFFIX = "-dynamics";
     private final String METADATA_COLLECTION_SUFFIX = "-metadata";
@@ -26,12 +30,14 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
     public MongoResultStorageDAOImpl(
         String mongoUri,
         String mongoDatabase,
-        String mongoCollection
+        String mongoCollection,
+        String csvExportDirectory
     ) {
         this.mongoUri = mongoUri;
         this.mongoDatabase = mongoDatabase;
         this.mongoCollection = mongoCollection;
         this.json = new ObjectMapper();
+        this.csvExportDirectory = csvExportDirectory;
     }
 
     private MongoCollection<Document> getCollection(String suffix) {
@@ -102,11 +108,99 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
                 "MongoDB: Successfully wrote SessionEntropyData to collection: " +
                     collectionName
             );
+            String fileName = csvExportDirectory + "/" + sessionEntropyData.getSessionID() + "-all-entropy-ts.csv";
+            
+            try (PrintWriter writer = new PrintWriter(new FileWriter(fileName, true))) {
+                if (new java.io.File(fileName).length() == 0) {
+                    writer.println("sessionID,entropyType,keyID,layer,entropyValue"); 
+                }
+                this.exportEntropyMapToCsv(
+                    writer, 
+                    sessionEntropyData.getSessionID(), 
+                    "SCENARIO", 
+                    sessionEntropyData.getScenarioEntropy()
+                );
+                this.exportEntropyMapToCsv(
+                    writer, 
+                    sessionEntropyData.getSessionID(), 
+                    "PERTURBATION", 
+                    sessionEntropyData.getPertubationEntropy()
+                );
+                EntropyObject sessionSummary = sessionEntropyData.getSession_entropy();
+                if (sessionSummary != null) {
+                     this.exportEntropyObjectToCsv(
+                        writer, 
+                        sessionEntropyData.getSessionID(), 
+                        "SESSION_SUMMARY", 
+                        "SESSION",
+                        sessionSummary
+                    );
+                }
+
+
+                System.out.println(
+                    "CSV: Successfully exported SessionEntropyData to: " + fileName
+                );
+            } catch (IOException csvE) {
+                System.err.println("CSV Error writing entropy data: " + csvE.getMessage());
+            }
+
         } catch (Exception e) {
             throw new IOException(
                 "MongoDB Error writing entropy data: " + e.getMessage(),
                 e
             );
+        }
+    }
+    private void exportEntropyMapToCsv(
+        PrintWriter writer, 
+        String sessionID, 
+        String entropyType, 
+        Map<String, EntropyObject> entropyMap
+    ) {
+        if (entropyMap == null) return;
+        
+        for (Map.Entry<String, EntropyObject> entry : entropyMap.entrySet()) {
+            String keyID = entry.getKey();
+            EntropyObject entropyObj = entry.getValue();
+            
+            if (entropyObj != null) {
+                this.exportEntropyObjectToCsv(
+                    writer, 
+                    sessionID, 
+                    entropyType, 
+                    keyID, 
+                    entropyObj
+                );
+            }
+        }
+    }
+
+    private void exportEntropyObjectToCsv(
+        PrintWriter writer, 
+        String sessionID, 
+        String entropyType, 
+        String keyID, 
+        EntropyObject entropyObj
+    ) {
+        Map<EntropyLayer, double[]> layerMap = entropyObj.getLayerEntropies();
+        if (layerMap == null) return;
+
+        for (Map.Entry<EntropyLayer, double[]> layerEntry : layerMap.entrySet()) {
+            String layerName = layerEntry.getKey().name();
+            double[] entropyTimeSeries = layerEntry.getValue();
+
+            if (entropyTimeSeries != null) {
+                for (int i = 0; i < entropyTimeSeries.length; i++) {
+                    writer.printf("%s,%s,%s,%s,%.6f%n",
+                        sessionID,
+                        entropyType,
+                        keyID,
+                        layerName,
+                        entropyTimeSeries[i]
+                    );
+                }
+            }
         }
     }
 
@@ -119,6 +213,13 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
         String collectionName = mongoCollection + DYNAMICS_COLLECTION_SUFFIX;
 
         try {
+            final String[] METRIC_LABELS = {
+                "Enaction",
+                "Adaptation",
+                "Recovery",
+                "Influence",
+            };
+            
             MongoCollection<Document> collection = getCollection(
                 DYNAMICS_COLLECTION_SUFFIX
             );
@@ -137,12 +238,7 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
                 );
                 return;
             }
-            final String[] METRIC_LABELS = {
-                "Enaction",
-                "Adaptation",
-                "Recovery",
-                "Influence",
-            };
+            
             Map<String, Map<String, Object>> labeledDynamics =
                 new java.util.LinkedHashMap<>();
 
@@ -165,6 +261,7 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
 
                 labeledDynamics.put(subjectKey, subjectMetrics);
             }
+            
             Map<String, Object> record = new java.util.LinkedHashMap<>();
             record.put("sessionID", sessionID);
             record.put("scenarioID", scenarioID);
@@ -181,6 +278,43 @@ public class MongoResultStorageDAOImpl implements ResultStorageDAO {
                     scenarioID +
                     ")"
             );
+            
+            String fileName = csvExportDirectory + "/" + sessionID + "-dynamics.csv";
+            try (PrintWriter writer = new PrintWriter(new FileWriter(fileName, true))) {
+                
+                if (new java.io.File(fileName).length() == 0) {
+                    writer.print("sessionID,scenarioID,subjectID");
+                    for (String label : METRIC_LABELS) {
+                        writer.print("," + label);
+                    }
+                    writer.println();
+                }
+
+                for (Map.Entry<String, Map<String, Object>> entry : labeledDynamics.entrySet()) {
+                    String subjectKey = entry.getKey();
+                    Map<String, Object> metrics = entry.getValue();
+
+                    writer.print(sessionID + "," + scenarioID + "," + subjectKey);
+                    
+                    for (String label : METRIC_LABELS) {
+                        Object value = metrics.getOrDefault(label, "");
+                        writer.print("," + String.valueOf(value));
+                    }
+                    
+                    if (metrics.containsKey("Raw_Data")) {
+                        writer.print(",Raw_Data:\"" + metrics.get("Raw_Data") + "\"");
+                    }
+                    
+                    writer.println();
+                }
+
+                System.out.println(
+                    "CSV: Successfully exported Team Dynamics to: " + fileName
+                );
+            } catch (IOException csvE) {
+                System.err.println("CSV Error writing team dynamics: " + csvE.getMessage());
+            }
+
         } catch (Exception e) {
             throw new IOException(
                 "MongoDB Error writing team dynamics: " + e.getMessage(),

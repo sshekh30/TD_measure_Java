@@ -45,4 +45,8 @@ public class ConfigManager {
         return properties.getProperty("mongo.collection", "scenario-topic");
     }
 
+    public String getCsvExportDirectory() {
+        return properties.getProperty("csv.export.directory", "results");
+    }
+
 }
